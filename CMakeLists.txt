@@ -5,9 +5,21 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/")
 
 find_package(assimp REQUIRED)
-if(NOT ASSIMP_FOUND)
+if(NOT assimp_FOUND)
     message(STATUS ">>> assimp not found")
-endif(NOT ASSIMP_FOUND)
+endif(NOT assimp_FOUND)
 
 add_executable(${CMAKE_PROJECT_NAME} main.cpp)
 
+if(assimp_FOUND)
+    set(EXTRA_INCLUDE_DIR ${assimp_INCLUDE_DIRS})
+    target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${EXTRA_INCLUDE_DIR})
+    target_link_libraries(${CMAKE_PROJECT_NAME} ${assimp_LIBRARIES})
+endif()
+
+# print all of cmake variables to terminal
+#get_cmake_property(_variableNames VARIABLES)
+#list (SORT _variableNames)
+#foreach (_variableName ${_variableNames})
+#    message(STATUS "${_variableName}=${${_variableName}}")
+#endforeach()

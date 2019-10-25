@@ -1,6 +1,7 @@
 /*
 
 !/cmake/
+!/res/
 !/.gitignore
 !/CMakeLists.txt
 !/main.cpp
