@@ -1,4 +1,6 @@
 #include <iostream>
+#include <chrono>
+#include <ctime>
 #include <string>
 #include <vector>
 #include <assimp/Importer.hpp>
@@ -38,7 +40,12 @@ mesh* process_mesh(aiMesh* ai_mesh, const aiScene* scene);
 std::vector<texture> load_texture(aiMaterial *mat, aiTextureType type, const std::string& typeName);
 
 int main() {
+  std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
   load_model("../res/nanosuit.obj");
+  std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
+  float delta = std::chrono::duration_cast<std::chrono::duration<float, std::milli>>(end - start).count();
+  std::cout << "elapsed time: " << delta << " milli sec" << std::endl;
+
   int i = 0;
   std::cout << "total mesh count: " << meshes.size() << std::endl;
   for (auto m : meshes) {
