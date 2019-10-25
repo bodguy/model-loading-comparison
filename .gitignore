@@ -4,5 +4,6 @@
 !/res/
 !/.gitignore
 !/CMakeLists.txt
-!/main.cpp
+!/src/
 !/README.md
+!/run.sh

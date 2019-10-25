@@ -9,7 +9,7 @@ if(NOT assimp_FOUND)
     message(STATUS ">>> assimp not found")
 endif(NOT assimp_FOUND)
 
-add_executable(${CMAKE_PROJECT_NAME} main.cpp)
+add_executable(${CMAKE_PROJECT_NAME} src/main.cpp src/obj_loader.h src/common.h src/assimp_loader.h)
 
 if(assimp_FOUND)
     set(EXTRA_INCLUDE_DIR ${assimp_INCLUDE_DIRS})

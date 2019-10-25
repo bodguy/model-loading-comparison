@@ -1,88 +1,35 @@
-#include <iostream>
-#include <chrono>
-#include <ctime>
-#include <string>
-#include <vector>
+#ifndef MODEL_LOAD_ASSIMP_LOADER_H
+#define MODEL_LOAD_ASSIMP_LOADER_H
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+#include "common.h"
 
-typedef struct {
-    float x, y, z;
-} vec3;
-
-typedef struct {
-    float x, y;
-} vec2;
-
-typedef struct {
-    vec3 pos, normal;
-    vec2 tex_coords;
-} vertex;
-
-typedef struct {
-    uint32_t id;
-    std::string type;
-    std::string path;
-} texture;
-
-typedef struct {
-    std::vector<vertex> vertices;
-    std::vector<uint32_t> indices;
-    std::vector<texture> textures;
-} mesh;
-
-std::vector<mesh*> meshes;
-
-void load_model(const std::string& filename);
-void process_node(aiNode* node, const aiScene* scene);
+bool load_model(const std::string& filename, std::vector<mesh*>& out_mesh);
+void process_node(aiNode* node, const aiScene* scene, std::vector<mesh*>& meshes);
 mesh* process_mesh(aiMesh* ai_mesh, const aiScene* scene);
 std::vector<texture> load_texture(aiMaterial *mat, aiTextureType type, const std::string& typeName);
 
-int main() {
-  std::chrono::time_point<std::chrono::high_resolution_clock> start = std::chrono::high_resolution_clock::now();
-  load_model("../res/nanosuit.obj");
-  std::chrono::time_point<std::chrono::high_resolution_clock> end = std::chrono::high_resolution_clock::now();
-  float delta = std::chrono::duration_cast<std::chrono::duration<float, std::milli>>(end - start).count();
-  std::cout << "elapsed time: " << delta << " milli sec" << std::endl;
-
-  int i = 0;
-  std::cout << "total mesh count: " << meshes.size() << std::endl;
-  for (auto m : meshes) {
-    std::cout << "mesh: " << i << ", vertex count: " << m->vertices.size() << std::endl;
-    std::cout << "mesh: " << i << ", index count: " << m->indices.size() << std::endl;
-    std::cout << "mesh: " << i << ", texture count: " << m->textures.size() << std::endl;
-    std::cout << "===========================" << std::endl;
-    i++;
-  }
-
-  // free memory
-  for (auto m : meshes) {
-    delete m;
-  }
-
-  return 0;
-}
-
-void load_model(const std::string& filename) {
+bool load_model(const std::string& filename, std::vector<mesh*>& out_mesh) {
   Assimp::Importer importer;
   const aiScene* scene = importer.ReadFile(filename, aiProcess_Triangulate | aiProcess_FlipUVs);
 
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-    std::cout << "ASSIMP::ERROR:" << importer.GetErrorString() << std::endl;
-    return;
+    return false;
   }
-  process_node(scene->mRootNode, scene);
+  process_node(scene->mRootNode, scene, out_mesh);
+  return true;
 }
 
-void process_node(aiNode* node, const aiScene* scene) {
+void process_node(aiNode* node, const aiScene* scene, std::vector<mesh*>& meshes) {
   for (int i = 0; i < node->mNumMeshes; i++) {
     aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
     meshes.push_back(process_mesh(mesh, scene));
   }
 
   for (int i = 0; i < node->mNumChildren; i++) {
-    process_node(node->mChildren[i], scene);
+    process_node(node->mChildren[i], scene, meshes);
   }
 }
 
@@ -150,3 +97,5 @@ std::vector<texture> load_texture(aiMaterial *mat, aiTextureType type, const std
 
   return textures;
 }
+
+#endif //MODEL_LOAD_ASSIMP_LOADER_H
