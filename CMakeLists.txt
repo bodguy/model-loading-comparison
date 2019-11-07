@@ -9,7 +9,8 @@ if(NOT assimp_FOUND)
     message(STATUS ">>> assimp not found")
 endif(NOT assimp_FOUND)
 
-add_executable(${CMAKE_PROJECT_NAME} src/main.cpp src/obj_loader.h src/common.h src/assimp_loader.h)
+file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.h)
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
 
 if(assimp_FOUND)
     set(EXTRA_INCLUDE_DIR ${assimp_INCLUDE_DIRS})

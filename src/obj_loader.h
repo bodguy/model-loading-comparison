@@ -52,38 +52,38 @@ bool load_obj(const std::string& filename, std::vector<mesh*>& out_mesh) {
 }
 
 void process_vertex(FILE* file, const std::vector<vec2>& uvsIn, const std::vector<vec3>& normalsIn, std::vector<mesh*>& out_mesh) {
-  unsigned int vi[3];
-  unsigned int ti[3];
-  unsigned int ni[3];
+//  unsigned int vi[3];
+//  unsigned int ti[3];
+//  unsigned int ni[3];
 
-  if (states == States::NONE) {
-    fscanf(file, "%d %d %d\n", &vi[0], &vi[1], &vi[2]);
-  } else if (states == States::ONLY_A) {
-    fscanf(file, "%d/%d %d/%d %d/%d\n", &vi[0], &ti[0], &vi[1], &ti[1], &vi[2], &ti[2]);
-    // flip the uv coordinate
-    mUvs[vi[0] - 1] = vec2(uvsIn[ti[0] - 1].x, 1.f - uvsIn[ti[0] - 1].y);
-    mUvs[vi[1] - 1] = vec2(uvsIn[ti[1] - 1].x, 1.f - uvsIn[ti[1] - 1].y);
-    mUvs[vi[2] - 1] = vec2(uvsIn[ti[2] - 1].x, 1.f - uvsIn[ti[2] - 1].y);
-  } else if (states == States::ONLY_B) {
-    fscanf(file, "%d//%d %d//%d %d//%d\n", &vi[0], &ni[0], &vi[1], &ni[1], &vi[2], &ni[2]);
-    mNormals[vi[0] - 1] = normalsIn[ni[0] - 1];
-    mNormals[vi[1] - 1] = normalsIn[ni[1] - 1];
-    mNormals[vi[2] - 1] = normalsIn[ni[2] - 1];
-  } else if (states == States::BOTH) {
-    fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vi[0], &ti[0], &ni[0], &vi[1], &ti[1], &ni[1], &vi[2], &ti[2], &ni[2]);
-    // flip the uv coordinate
-    mUvs[vi[0] - 1] = vec2(uvsIn[ti[0] - 1].x, 1.f - uvsIn[ti[0] - 1].y);
-    mUvs[vi[1] - 1] = vec2(uvsIn[ti[1] - 1].x, 1.f - uvsIn[ti[1] - 1].y);
-    mUvs[vi[2] - 1] = vec2(uvsIn[ti[2] - 1].x, 1.f - uvsIn[ti[2] - 1].y);
-
-    mNormals[vi[0] - 1] = normalsIn[ni[0] - 1];
-    mNormals[vi[1] - 1] = normalsIn[ni[1] - 1];
-    mNormals[vi[2] - 1] = normalsIn[ni[2] - 1];
-  }
-
-  mFaces.push_back(vi[0] - 1);
-  mFaces.push_back(vi[1] - 1);
-  mFaces.push_back(vi[2] - 1);
+//  if (states == States::NONE) {
+//    fscanf(file, "%d %d %d\n", &vi[0], &vi[1], &vi[2]);
+//  } else if (states == States::ONLY_A) {
+//    fscanf(file, "%d/%d %d/%d %d/%d\n", &vi[0], &ti[0], &vi[1], &ti[1], &vi[2], &ti[2]);
+//    // flip the uv coordinate
+//    mUvs[vi[0] - 1] = vec2(uvsIn[ti[0] - 1].x, 1.f - uvsIn[ti[0] - 1].y);
+//    mUvs[vi[1] - 1] = vec2(uvsIn[ti[1] - 1].x, 1.f - uvsIn[ti[1] - 1].y);
+//    mUvs[vi[2] - 1] = vec2(uvsIn[ti[2] - 1].x, 1.f - uvsIn[ti[2] - 1].y);
+//  } else if (states == States::ONLY_B) {
+//    fscanf(file, "%d//%d %d//%d %d//%d\n", &vi[0], &ni[0], &vi[1], &ni[1], &vi[2], &ni[2]);
+//    mNormals[vi[0] - 1] = normalsIn[ni[0] - 1];
+//    mNormals[vi[1] - 1] = normalsIn[ni[1] - 1];
+//    mNormals[vi[2] - 1] = normalsIn[ni[2] - 1];
+//  } else if (states == States::BOTH) {
+//    fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vi[0], &ti[0], &ni[0], &vi[1], &ti[1], &ni[1], &vi[2], &ti[2], &ni[2]);
+//    // flip the uv coordinate
+//    mUvs[vi[0] - 1] = vec2(uvsIn[ti[0] - 1].x, 1.f - uvsIn[ti[0] - 1].y);
+//    mUvs[vi[1] - 1] = vec2(uvsIn[ti[1] - 1].x, 1.f - uvsIn[ti[1] - 1].y);
+//    mUvs[vi[2] - 1] = vec2(uvsIn[ti[2] - 1].x, 1.f - uvsIn[ti[2] - 1].y);
+//
+//    mNormals[vi[0] - 1] = normalsIn[ni[0] - 1];
+//    mNormals[vi[1] - 1] = normalsIn[ni[1] - 1];
+//    mNormals[vi[2] - 1] = normalsIn[ni[2] - 1];
+//  }
+//
+//  mFaces.push_back(vi[0] - 1);
+//  mFaces.push_back(vi[1] - 1);
+//  mFaces.push_back(vi[2] - 1);
 }
 
 #endif //MODEL_LOAD_OBJ_LOADER_H
