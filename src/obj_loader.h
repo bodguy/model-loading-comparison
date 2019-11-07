@@ -4,6 +4,49 @@
 #include <cstring>
 #include "common.h"
 
+struct Node {
+    std::string name; // rootNode name is filename
+    Node* parent; // rootNode parent is null, child has parent that is rootNode
+    unsigned int num_child; // size of child
+    Node** child;
+    unsigned int num_meshes; // size of meshes
+    unsigned int* meshes; // scene mesh index array
+};
+
+struct Mesh {
+    unsigned int num_vertices;
+    vec3** vertices;
+    unsigned int num_normals;
+    vec3** normals;
+    unsigned int num_texture_coords;
+    vec2** texture_coords;
+    unsigned int num_tangent;
+    vec3** tangent;
+    unsigned int num_bitangent;
+    vec3** bitangent;
+};
+
+enum class TextureType {
+  AMBIENT,
+  DIFFUSE,
+  SPECULAR,
+  NORMAL
+};
+
+struct Material {
+    unsigned int num_texture;
+    std::string texture_path;
+    TextureType type;
+};
+
+struct Scene {
+    Node* rootNode;
+    unsigned int num_meshes;
+    Mesh** meshes;
+    unsigned int num_materials;
+    Material** material;
+};
+
 bool load_obj(const std::string& filename, std::vector<mesh*>& out_mesh);
 void process_vertex(FILE* file, const std::vector<vec2>& uvsIn, const std::vector<vec3>& normalsIn, std::vector<mesh*>& out_mesh);
 
@@ -11,6 +54,7 @@ bool load_obj(const std::string& filename, std::vector<mesh*>& out_mesh) {
   FILE* file = fopen(filename.c_str(), "r");
   if (file == NULL) return false;
 
+  mesh my_mesh;
   std::vector<vec3> vertices;
   std::vector<vec2> tex_coords;
   std::vector<vec3> normals;
@@ -19,8 +63,10 @@ bool load_obj(const std::string& filename, std::vector<mesh*>& out_mesh) {
   while (1) {
     int res = fscanf(file, "%s", word);
     if (res == EOF) break;
-
-    if (strcmp(word, "v") == 0) {
+    if (strcmp(word, "o") == 0) {
+      char* name;
+      fscanf(file, "%s\n", name);
+    } else if (strcmp(word, "v") == 0) {
       vec3 v;
       fscanf(file, "%f %f %f\n", &v.x, &v.y, &v.z);
       vertices.push_back(v);
