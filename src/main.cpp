@@ -1,7 +1,10 @@
 #include <iostream>
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
+#include "tiny_obj_loader.h"
 #include "assimp_loader.h"
 #include "obj_loader.h"
 
+void log_mesh_profile(const std::string& name, std::vector<tinyobj::shape_t>& sh);
 void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh);
 void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh);
 
@@ -44,7 +47,34 @@ int main() {
   std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 
+  tinyobj::attrib_t attrib;
+  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::material_t> materials;
+  std::string warn;
+  std::string err;
+
+  for (auto& str : file_list) {
+    watch.start();
+    bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, ("../res/" + str).c_str());
+    watch.stop();
+    time_accumulate.push_back(watch.milli());
+    log_mesh_profile(str, shapes);
+  }
+  average = 0.f;
+  for (auto& t : time_accumulate) {
+    average += t;
+  }
+  average /= time_accumulate.size();
+  std::cout << "elapsed time (TBL): " << average << " ms" << '\n';
+  std::cout << "===========================================" << '\n';
+  time_accumulate.clear();
+
   return 0;
+}
+
+void log_mesh_profile(const std::string& name, std::vector<tinyobj::shape_t>& sh) {
+  std::cout << "total mesh count (" << name << "): " << sh.size() << '\n';
+  sh.clear();
 }
 
 void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh) {

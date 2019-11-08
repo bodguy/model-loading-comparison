@@ -9,11 +9,11 @@ if(NOT assimp_FOUND)
     message(STATUS ">>> assimp not found")
 endif(NOT assimp_FOUND)
 
+set(THIRD_PARTY_DIR "third_party/")
+
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.h)
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
-
-set(THIRD_PARTY_DIR "third_party/")
-include_directories(${THIRD_PARTY_DIR})
+target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${THIRD_PARTY_DIR})
 
 if(assimp_FOUND)
     set(EXTRA_INCLUDE_DIR ${assimp_INCLUDE_DIRS})
