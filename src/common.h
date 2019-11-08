@@ -4,6 +4,12 @@
 #include <string>
 #include <vector>
 
+struct vec4 {
+  vec4() :x(0), y(0), z(0), w(0) {}
+  vec4(float tx, float ty, float tz, float tw) { x = tx; y = ty; z = tz; w = tw; }
+  float x, y, z, w;
+};
+
 struct vec3 {
     vec3() :x(0), y(0), z(0) {}
     vec3(float tx, float ty,  float tz) { x = tx; y = ty; z = tz; }
