@@ -1,19 +1,22 @@
 #include <iostream>
 #define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 #include "tiny_obj_loader.h"
+#include "OBJ_Loader_third.h"
 #include "assimp_loader.h"
 #include "obj_loader.h"
 
+void log_mesh_profile(const std::string& name, objl::Loader& loader);
 void log_mesh_profile(const std::string& name, std::vector<tinyobj::shape_t>& sh);
 void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh);
 void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh);
 
 int main() {
-  std::vector<std::string> file_list = { "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "p226.obj", "sponza.obj", "Five_Wheeler.obj", "Guss.obj", "Skull.obj" };
+  std::vector<std::string> file_list = { "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "p226.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj" };
   std::vector<float> time_accumulate;
   StopWatch watch;
-  std::vector<mesh*> mesh_assimp;
 
+  // assimp
+  std::vector<mesh*> mesh_assimp;
   for (auto& str : file_list) {
     watch.start();
     bool res = load_model("../res/" + str, mesh_assimp);
@@ -30,6 +33,7 @@ int main() {
   std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 
+  // my loader
   std::vector<obj_loader::shape> shape_out;
   for (auto& str : file_list) {
     watch.start();
@@ -47,6 +51,7 @@ int main() {
   std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 
+  // Tiny obj loader
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -69,7 +74,30 @@ int main() {
   std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 
+  // OBJ Loader
+
+  for (auto& str : file_list) {
+    watch.start();
+    objl::Loader Loader;
+    bool ret = Loader.LoadFile("../res/" + str);
+    watch.stop();
+    time_accumulate.push_back(watch.milli());
+    log_mesh_profile(str, Loader);
+  }
+  average = 0.f;
+  for (auto& t : time_accumulate) {
+    average += t;
+  }
+  average /= time_accumulate.size();
+  std::cout << "elapsed time (OBJL): " << average << " ms" << '\n';
+  std::cout << "===========================================" << '\n';
+  time_accumulate.clear();
+
   return 0;
+}
+
+void log_mesh_profile(const std::string& name, objl::Loader& loader) {
+  std::cout << "total mesh count (" << name << "): " << loader.LoadedMeshes.size() << '\n';
 }
 
 void log_mesh_profile(const std::string& name, std::vector<tinyobj::shape_t>& sh) {
@@ -85,6 +113,7 @@ void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& s
 void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh) {
   std::cout << "total mesh count (" << name << "): " << mesh.size() << '\n';
   for (auto m : mesh) {
+    delete m;
     m = nullptr;
   }
   mesh.clear();
