@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <chrono>
 
 struct vec4 {
   vec4() :x(0), y(0), z(0), w(0) {}

@@ -474,13 +474,13 @@ namespace obj_loader {
       shapes.emplace_back(shape_group);
     }
 
-    std::cout << "The file contains " << line_no << " lines." << std::endl;
-    std::cout << "vertices " << vertices.size() << " lines." << std::endl;
-    std::cout << "normals " << normals.size() << " lines." << std::endl;
-    std::cout << "texcoords " << texcoords.size() << " lines." << std::endl;
-    std::cout << "max v " << max_vindex << std::endl;
-    std::cout << "max vt " << max_vtindex << std::endl;
-    std::cout << "max vn " << max_vnindex << std::endl;
+//    std::cout << "The file contains " << line_no << " lines." << std::endl;
+//    std::cout << "vertices " << vertices.size() << " lines." << std::endl;
+//    std::cout << "normals " << normals.size() << " lines." << std::endl;
+//    std::cout << "texcoords " << texcoords.size() << " lines." << std::endl;
+//    std::cout << "max v " << max_vindex << std::endl;
+//    std::cout << "max vt " << max_vtindex << std::endl;
+//    std::cout << "max vn " << max_vnindex << std::endl;
 
     return true;
   }

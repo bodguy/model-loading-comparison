@@ -1,47 +1,61 @@
 #include <iostream>
-#include <chrono>
 #include "assimp_loader.h"
 #include "obj_loader.h"
 
-void log_mesh_profile(const std::vector<obj_loader::shape>& sh);
-void log_mesh_profile(const std::vector<mesh*>& mesh);
+void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh);
+void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh);
 
 int main() {
+  std::vector<std::string> file_list = { "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "p226.obj", "sponza.obj", "Five_Wheeler.obj", "Guss.obj", "Skull.obj" };
+  std::vector<float> time_accumulate;
   StopWatch watch;
   std::vector<mesh*> mesh_assimp;
-  watch.start();
-  load_model("../res/nanosuit.obj", mesh_assimp);
-  watch.stop();
-  std::cout << "elapsed time (ASSIMP): " << watch.milli() << " ms" << std::endl;
-  log_mesh_profile(mesh_assimp);
+
+  for (auto& str : file_list) {
+    watch.start();
+    bool res = load_model("../res/" + str, mesh_assimp);
+    watch.stop();
+    time_accumulate.push_back(watch.milli());
+    log_mesh_profile(str, mesh_assimp);
+  }
+  float average = 0.f;
+  for (auto& t : time_accumulate) {
+    average += t;
+  }
+  average /= time_accumulate.size();
+  std::cout << "elapsed time (ASSIMP): " << average << " ms" << '\n';
+  std::cout << "===========================================" << '\n';
+  time_accumulate.clear();
 
   std::vector<obj_loader::shape> shape_out;
-  watch.start();
-  load_obj("../res/nanosuit.obj", shape_out, obj_loader::ParseFlag::FLIP_UV);
-  watch.stop();
-  std::cout << "elapsed time (OBJ): " << watch.milli() << " ms" << std::endl;
-  log_mesh_profile(shape_out);
+  for (auto& str : file_list) {
+    watch.start();
+    bool res = load_obj("../res/" + str, shape_out, obj_loader::ParseFlag::FLIP_UV);
+    watch.stop();
+    time_accumulate.push_back(watch.milli());
+    log_mesh_profile(str, shape_out);
+  }
+  average = 0.f;
+  for (auto& t : time_accumulate) {
+    average += t;
+  }
+  average /= time_accumulate.size();
+  std::cout << "elapsed time (OBJ): " << average << " ms" << '\n';
+  std::cout << "===========================================" << '\n';
+  time_accumulate.clear();
 
   return 0;
 }
 
-void log_mesh_profile(const std::vector<obj_loader::shape>& sh) {
-  for (auto& s : sh) {
-    std::cout << "===========================" << std::endl;
-    std::cout << "name: " << s.name << std::endl;
-    std::cout << "indices: " << s.mesh_group.indices.size() << std::endl;
-  }
+void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh) {
+  std::cout << "total mesh count (" << name << "): " << sh.size() << '\n';
+  sh.clear();
 }
 
-void log_mesh_profile(const std::vector<mesh*>& mesh) {
-  int i = 0;
-  std::cout << "total mesh count: " << mesh.size() << std::endl;
+void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh) {
+  std::cout << "total mesh count (" << name << "): " << mesh.size() << '\n';
   for (auto m : mesh) {
-    std::cout << "mesh: " << i << ", vertex count: " << m->vertices.size() << std::endl;
-    std::cout << "mesh: " << i << ", index count: " << m->indices.size() << std::endl;
-    std::cout << "mesh: " << i << ", texture count: " << m->textures.size() << std::endl;
-    std::cout << "===========================" << std::endl;
-    i++;
-    delete m;
+    m = nullptr;
   }
+  mesh.clear();
 }

@@ -45,10 +45,13 @@ mesh* process_mesh(aiMesh* ai_mesh, const aiScene* scene) {
     v.y = ai_mesh->mVertices[i].y;
     v.z = ai_mesh->mVertices[i].z;
     vertex.pos = v;
-    v.x = ai_mesh->mNormals[i].x;
-    v.y = ai_mesh->mNormals[i].y;
-    v.z = ai_mesh->mNormals[i].z;
-    vertex.normal = v;
+    if (ai_mesh->mNormals) {
+      v.x = ai_mesh->mNormals[i].x;
+      v.y = ai_mesh->mNormals[i].y;
+      v.z = ai_mesh->mNormals[i].z;
+      vertex.normal = v;
+    }
+
     if (ai_mesh->mTextureCoords[0]) {
       vec2 vec;
       vec.x = ai_mesh->mTextureCoords[0][i].x;
