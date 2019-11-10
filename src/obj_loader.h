@@ -283,7 +283,23 @@ namespace obj_loader {
     return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
   }
 
-// NOTE: not support color(w), point, line shape
+  void split_str(std::vector<std::string>& elems, const char* delims, const char** token) {
+    const char* end = (*token) + strcspn((*token), "\n\r");
+    size_t offset = end - (*token);
+    if (offset != 0) {
+      char* dest = (char*)malloc(sizeof(char) * offset + 1);
+      strncpy(dest, (*token), offset);
+      *(dest + offset) = 0;
+      const char* pch = strtok(dest, delims);
+      while (pch != nullptr) {
+        elems.emplace_back(pch);
+        pch = strtok(nullptr, delims);
+      }
+      free(dest);
+    }
+  }
+
+// NOTE: Geometry entities other than "facets" (including "points", "lines", "curves", etc.) are not supported.
   bool load_obj(const std::string& path, std::vector<shape>& shapes, ParseFlag flag) {
     if (!endsWith(path, ".obj")) {
       return false;
@@ -304,12 +320,10 @@ namespace obj_loader {
     shape shape_group;
     std::unordered_map<std::string, int> material_map;
     int current_material_id = -1;
-
-    int line_no = 0;
     std::string line_buf;
+
     while(ifs.peek() != -1) {
       safeGetline(ifs, line_buf); // read line by line
-      ++line_no;
 
       // Trim newline '\r\n' or '\n'
       if (line_buf.size() > 0) {
@@ -330,7 +344,7 @@ namespace obj_loader {
       const char *token = line_buf.c_str(); // read only token
       token += strspn(token, " \t");
 
-      assert(token);
+      if (token == nullptr) return false;
       if (token[0] == '\0') continue;  // empty line
       if (token[0] == '#') continue;  // comment line
 
@@ -410,10 +424,16 @@ namespace obj_loader {
         continue;
       }
 
-      // @TODO
       // load mtl
       if ((0 == strncmp(token, "mtllib", 6)) && IS_SPACE((token[6]))) {
-        
+        token += 7;
+        std::vector<std::string> filenames;
+        // parse multiple mtl filenames split by whitespace
+        split_str(filenames, " ", &token);
+        // load at least one mtl file
+        for (size_t s = 0; s < filenames.size(); s++) {
+
+        }
         continue;
       }
 
@@ -493,14 +513,6 @@ namespace obj_loader {
     if (ret || !shape_group.mesh_group.indices.empty()) {
       shapes.emplace_back(shape_group);
     }
-
-//    std::cout << "The file contains " << line_no << " lines." << std::endl;
-//    std::cout << "vertices " << vertices.size() << " lines." << std::endl;
-//    std::cout << "normals " << normals.size() << " lines." << std::endl;
-//    std::cout << "texcoords " << texcoords.size() << " lines." << std::endl;
-//    std::cout << "max v " << max_vindex << std::endl;
-//    std::cout << "max vt " << max_vtindex << std::endl;
-//    std::cout << "max vn " << max_vnindex << std::endl;
 
     return true;
   }
