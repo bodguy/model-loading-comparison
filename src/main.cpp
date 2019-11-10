@@ -46,7 +46,7 @@ void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& s
 #endif
 
 int main() {
-  std::vector<std::string> file_list = { "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "p226.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj" };
+  std::vector<std::string> file_list = { "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "p226.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj" };
   std::vector<float> time_accumulate;
   StopWatch watch;
   float average = 0.f;
@@ -75,7 +75,7 @@ int main() {
   std::vector<obj_loader::shape> shape_out;
   for (auto& str : file_list) {
     watch.start();
-    bool res = load_obj("../res/" + str, shape_out, obj_loader::ParseFlag::FLIP_UV);
+    bool res = load_obj("../res/" + str, shape_out, obj_loader::parse_option::FLIP_UV);
     watch.stop();
     time_accumulate.push_back(watch.milli());
     log_mesh_profile(str, shape_out);

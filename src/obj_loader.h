@@ -24,24 +24,20 @@ namespace obj_loader {
   };
 
   struct face {
-    unsigned int smoothing_group_id;
+    face() :vertex_indices() {}
     std::vector<vertex_index> vertex_indices;
-    face() :smoothing_group_id(0) {}
   };
 
   struct primitive_group {
     primitive_group() :face_group() { face_group.clear(); }
-    std::vector<face> face_group;
     bool is_empty() const { return face_group.empty(); }
+    std::vector<face> face_group;
   };
 
   struct mesh {
-    mesh() :indices(), num_face_vertices(), smoothing_group_ids() {
-      indices.clear(); num_face_vertices.clear(); smoothing_group_ids.clear();
-    }
+    mesh() :indices(), num_face_vertices() { indices.clear(); num_face_vertices.clear(); }
     std::vector<vertex_index> indices;
     std::vector<unsigned char> num_face_vertices; // 3: tri, 4: quad etc... Up to 255 vertices per face
-    std::vector<unsigned int> smoothing_group_ids; // per face smoothing group IDs (0 = off. positive value = group id)
     std::vector<int> material_ids; // per face material IDs
   };
 
@@ -51,7 +47,11 @@ namespace obj_loader {
     mesh mesh_group;
   };
 
-  enum class ParseFlag {
+  struct material {
+
+  };
+
+  enum class parse_option {
     NONE = 0,
     TRIANGULATE = 1 << 0,
     FLIP_UV = 1 << 1,
@@ -59,15 +59,15 @@ namespace obj_loader {
     CALC_NORMAL = 1 << 3 // @TODO
   };
 
-  bool operator&(const ParseFlag a, const ParseFlag b) {
-    return static_cast<ParseFlag>(static_cast<int>(a) & static_cast<int>(b)) == b;
+  bool operator&(const parse_option a, const parse_option b) {
+    return static_cast<parse_option>(static_cast<int>(a) & static_cast<int>(b)) == b;
   }
 
-  ParseFlag operator|(const ParseFlag a, const ParseFlag b) {
-    return static_cast<ParseFlag>(static_cast<int>(a) | static_cast<int>(b));
+  parse_option operator|(const parse_option a, const parse_option b) {
+    return static_cast<parse_option>(static_cast<int>(a) | static_cast<int>(b));
   }
 
-  bool parse_prim_group(shape* shape_group, const primitive_group& prim_group, ParseFlag flag, const int material_id, const std::string& name) {
+  bool parsePrimitive(shape* shape_group, const primitive_group& prim_group, parse_option flag, const int material_id, const std::string& name) {
     if (prim_group.is_empty()) {
       return false;
     }
@@ -84,14 +84,13 @@ namespace obj_loader {
           continue;
         }
 
-        if (flag & ParseFlag::TRIANGULATE) {
+        if (flag & parse_option::TRIANGULATE) {
           // @TODO
         } else {
           for (size_t k = 0; k < npolys; k++) {
             shape_group->mesh_group.indices.emplace_back(face_group.vertex_indices[k]);
           }
           shape_group->mesh_group.num_face_vertices.emplace_back(static_cast<unsigned char>(npolys));
-          shape_group->mesh_group.smoothing_group_ids.emplace_back(face_group.smoothing_group_id);
           shape_group->mesh_group.material_ids.emplace_back(material_id);
         }
       }
@@ -204,10 +203,10 @@ namespace obj_loader {
     return f;
   }
 
-  void parseVT(float* x, float* y, const char** token, ParseFlag flag,
+  void parseVT(float* x, float* y, const char** token, parse_option flag,
                float default_x = 0.f, float default_y = 0.f) {
     (*x) = parseReal(token, default_x);
-    if (flag & ParseFlag::FLIP_UV) {
+    if (flag & parse_option::FLIP_UV) {
       (*y) = 1.f - parseReal(token, default_y);
     } else {
       (*y) = parseReal(token, default_y);
@@ -229,25 +228,7 @@ namespace obj_loader {
     (*w) = parseReal(token, default_w);
   }
 
-  void parseSm(const char** token, unsigned int* out) {
-    if ((*token)[0] == '\0') {
-      return;
-    }
-
-    if ((*token)[0] == '\r' || (*token)[1] == '\n') {
-      return;
-    }
-
-    if (strlen((*token)) >= 3 && (0 == strncmp((*token), "off", 3))) {
-      (*out) = 0;
-    } else {
-      int tmp_id = atoi((*token));
-      (*out) = tmp_id < 0 ? 0 : static_cast<unsigned int>(tmp_id);
-    }
-    (*token) += strcspn((*token), " \t\r");
-  }
-
-  std::istream& safeGetline(std::istream& is, std::string& t) {
+  std::istream& getline(std::istream& is, std::string& t) {
     t.clear();
 
     // The characters in the stream are read one-by-one using a std::streambuf.
@@ -283,7 +264,7 @@ namespace obj_loader {
     return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
   }
 
-  void split_str(std::vector<std::string>& elems, const char* delims, const char** token) {
+  void splitStr(std::vector<std::string>& elems, const char* delims, const char** token) {
     const char* end = (*token) + strcspn((*token), "\n\r");
     size_t offset = end - (*token);
     if (offset != 0) {
@@ -299,8 +280,13 @@ namespace obj_loader {
     }
   }
 
+  bool parseMat(const std::string& mat_name, const std::vector<material>& materials, const std::unordered_map<std::string, int>& material_map) {
+    return true;
+  }
+
 // NOTE: Geometry entities other than "facets" (including "points", "lines", "curves", etc.) are not supported.
-  bool load_obj(const std::string& path, std::vector<shape>& shapes, ParseFlag flag) {
+// smooth group is also not supported.
+  bool load_obj(const std::string& path, std::vector<shape>& shapes, parse_option flag) {
     if (!endsWith(path, ".obj")) {
       return false;
     }
@@ -315,15 +301,14 @@ namespace obj_loader {
     std::vector<vec3> normals;
     primitive_group prim_group;
     std::string current_object_name;
-    unsigned int current_smoothing_id = 0;
     int max_vindex = -1, max_vtindex = -1, max_vnindex = -1;
     shape shape_group;
     std::unordered_map<std::string, int> material_map;
+    std::vector<material> materials;
     int current_material_id = -1;
     std::string line_buf;
 
-    while(ifs.peek() != -1) {
-      safeGetline(ifs, line_buf); // read line by line
+    while(!getline(ifs, line_buf).eof()) {
 
       // Trim newline '\r\n' or '\n'
       if (line_buf.size() > 0) {
@@ -381,7 +366,6 @@ namespace obj_loader {
         token += strspn(token, " \t"); // Skip leading space.
 
         face f;
-        f.smoothing_group_id = current_smoothing_id;
         f.vertex_indices.reserve(3);
 
         while (!IS_NEW_LINE(token[0])) {
@@ -415,7 +399,7 @@ namespace obj_loader {
         // check current material and previous
         if (new_material_id != current_material_id) {
           // just make group and don't push it to shapes
-          parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
+          parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
           // clear current primitives shape groups
           prim_group.face_group.clear();
           // cache new material id
@@ -429,17 +413,19 @@ namespace obj_loader {
         token += 7;
         std::vector<std::string> filenames;
         // parse multiple mtl filenames split by whitespace
-        split_str(filenames, " ", &token);
-        // load at least one mtl file
-        for (size_t s = 0; s < filenames.size(); s++) {
-
+        splitStr(filenames, " ", &token);
+        // load at least one mtl file in the list
+        for (auto& name : filenames) {
+          if (parseMat(name, materials, material_map)) {
+            break;
+          }
         }
         continue;
       }
 
       // group name
       if (token[0] == 'g' && IS_SPACE((token[1]))) {
-        parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
+        parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
         if (!shape_group.mesh_group.indices.empty()) {
           shapes.emplace_back(shape_group);
         }
@@ -472,7 +458,7 @@ namespace obj_loader {
 
       // object name
       if (token[0] == 'o' && IS_SPACE((token[1]))) {
-        parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
+        parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
         if (!shape_group.mesh_group.indices.empty()) {
           shapes.emplace_back(shape_group);
         }
@@ -483,17 +469,6 @@ namespace obj_loader {
 
         token += 2;
         current_object_name = parseString(&token);
-        continue;
-      }
-
-      // smoothing group
-      // s 1
-      // s 2 ...
-      // s off
-      if (token[0] == 's' && IS_SPACE(token[1])) {
-        token += 2;
-        token += strspn(token, " \t");  // Skip leading space.
-        parseSm(&token, &current_smoothing_id);
         continue;
       }
     }
@@ -509,7 +484,7 @@ namespace obj_loader {
       return false;
     }
 
-    bool ret = parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name);
+    bool ret = parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name);
     if (ret || !shape_group.mesh_group.indices.empty()) {
       shapes.emplace_back(shape_group);
     }
