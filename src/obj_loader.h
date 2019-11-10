@@ -9,6 +9,7 @@
 #include <vector>
 #include <sstream>
 #include <algorithm>
+#include <unordered_map>
 #include "common.h"
 
 #define IS_SPACE(x) (((x) == ' ') || ((x) == '\t'))
@@ -39,8 +40,9 @@ namespace obj_loader {
       indices.clear(); num_face_vertices.clear(); smoothing_group_ids.clear();
     }
     std::vector<vertex_index> indices;
-    std::vector<unsigned char> num_face_vertices; // 3: tri, 4: quad
-    std::vector<unsigned int> smoothing_group_ids;
+    std::vector<unsigned char> num_face_vertices; // 3: tri, 4: quad etc... Up to 255 vertices per face
+    std::vector<unsigned int> smoothing_group_ids; // per face smoothing group IDs (0 = off. positive value = group id)
+    std::vector<int> material_ids; // per face material IDs
   };
 
   struct shape {
@@ -65,7 +67,7 @@ namespace obj_loader {
     return static_cast<ParseFlag>(static_cast<int>(a) | static_cast<int>(b));
   }
 
-  bool parse_prim_group(shape* shape_group, const primitive_group& prim_group, ParseFlag flag, const std::string& name) {
+  bool parse_prim_group(shape* shape_group, const primitive_group& prim_group, ParseFlag flag, const int material_id, const std::string& name) {
     if (prim_group.is_empty()) {
       return false;
     }
@@ -90,6 +92,7 @@ namespace obj_loader {
           }
           shape_group->mesh_group.num_face_vertices.emplace_back(static_cast<unsigned char>(npolys));
           shape_group->mesh_group.smoothing_group_ids.emplace_back(face_group.smoothing_group_id);
+          shape_group->mesh_group.material_ids.emplace_back(material_id);
         }
       }
     }
@@ -299,6 +302,8 @@ namespace obj_loader {
     unsigned int current_smoothing_id = 0;
     int max_vindex = -1, max_vtindex = -1, max_vnindex = -1;
     shape shape_group;
+    std::unordered_map<std::string, int> material_map;
+    int current_material_id = -1;
 
     int line_no = 0;
     std::string line_buf;
@@ -384,22 +389,37 @@ namespace obj_loader {
         continue;
       }
 
-      // @TODO
       // use mtl
       if ((0 == strncmp(token, "usemtl", 6)) && IS_SPACE((token[6]))) {
         token += 7;
+        std::string new_material_name = parseString(&token);
+        int new_material_id = -1;
+        // found
+        if (material_map.find(new_material_name) != material_map.end()) {
+          new_material_id = material_map[new_material_name];
+        }
+        // check current material and previous
+        if (new_material_id != current_material_id) {
+          // just make group and don't push it to shapes
+          parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
+          // clear current primitives shape groups
+          prim_group.face_group.clear();
+          // cache new material id
+          current_material_id = new_material_id;
+        }
         continue;
       }
 
       // @TODO
       // load mtl
       if ((0 == strncmp(token, "mtllib", 6)) && IS_SPACE((token[6]))) {
+        
         continue;
       }
 
       // group name
       if (token[0] == 'g' && IS_SPACE((token[1]))) {
-        parse_prim_group(&shape_group, prim_group, flag, current_object_name); // return value not used
+        parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
         if (!shape_group.mesh_group.indices.empty()) {
           shapes.emplace_back(shape_group);
         }
@@ -432,7 +452,7 @@ namespace obj_loader {
 
       // object name
       if (token[0] == 'o' && IS_SPACE((token[1]))) {
-        parse_prim_group(&shape_group, prim_group, flag, current_object_name); // return value not used
+        parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
         if (!shape_group.mesh_group.indices.empty()) {
           shapes.emplace_back(shape_group);
         }
@@ -469,7 +489,7 @@ namespace obj_loader {
       return false;
     }
 
-    bool ret = parse_prim_group(&shape_group, prim_group, flag, current_object_name);
+    bool ret = parse_prim_group(&shape_group, prim_group, flag, current_material_id, current_object_name);
     if (ret || !shape_group.mesh_group.indices.empty()) {
       shapes.emplace_back(shape_group);
     }
