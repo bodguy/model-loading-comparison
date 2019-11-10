@@ -299,8 +299,138 @@ namespace obj_loader {
     }
   }
 
-  inline void load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream &is) {
+  // NOTE: pbr material not support.
+  inline bool load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream &ifs) {
     // @TODO
+    std::string line_buf;
+    while(!getline(ifs, line_buf).eof()) {
+
+      // Trim trailing whitespace.
+      if (line_buf.size() > 0) {
+        line_buf = line_buf.substr(0, line_buf.find_last_not_of(" \t") + 1);
+      }
+
+      // Trim newline '\r\n' or '\n'
+      if (line_buf.size() > 0) {
+        if (line_buf[line_buf.size() - 1] == '\n')
+          line_buf.erase(line_buf.size() - 1);
+      }
+      if (line_buf.size() > 0) {
+        if (line_buf[line_buf.size() - 1] == '\r')
+          line_buf.erase(line_buf.size() - 1);
+      }
+
+      // Skip if empty line.
+      if (line_buf.empty()) {
+        continue;
+      }
+
+      // Skip leading space.
+      const char *token = line_buf.c_str(); // read only token
+      token += strspn(token, " \t");
+
+      if (token == nullptr) return false;
+      if (token[0] == '\0') continue;  // empty line
+      if (token[0] == '#') continue;  // comment line
+
+      // new mtl
+      if ((0 == strncmp(token, "newmtl", 6)) && IS_SPACE((token[6]))) {
+
+      }
+
+      // ambient
+      if (token[0] == 'K' && token[1] == 'a' && IS_SPACE((token[2]))) {
+        token += 2;
+      }
+
+      // diffuse
+      if (token[0] == 'K' && token[1] == 'd' && IS_SPACE((token[2]))) {
+        token += 2;
+      }
+
+      // specular
+      if (token[0] == 'K' && token[1] == 's' && IS_SPACE((token[2]))) {
+        token += 2;
+      }
+
+      // transmittance
+      if ((token[0] == 'K' && token[1] == 't' && IS_SPACE((token[2]))) ||
+          (token[0] == 'T' && token[1] == 'f' && IS_SPACE((token[2])))) {
+
+      }
+
+      // ior(index of refraction)
+      if (token[0] == 'N' && token[1] == 'i' && IS_SPACE((token[2]))) {
+
+      }
+
+      // emission
+      if (token[0] == 'K' && token[1] == 'e' && IS_SPACE(token[2])) {
+
+      }
+
+      // shininess
+      if (token[0] == 'N' && token[1] == 's' && IS_SPACE(token[2])) {
+
+      }
+
+      // illum model
+      if (0 == strncmp(token, "illum", 5) && IS_SPACE(token[5])) {
+
+      }
+
+      // dissolve
+      if ((token[0] == 'd' && IS_SPACE(token[1]))) {
+
+      }
+
+      // ambient texture
+      if ((0 == strncmp(token, "map_Ka", 6)) && IS_SPACE(token[6])) {
+
+      }
+
+      // diffuse texture
+      if ((0 == strncmp(token, "map_Kd", 6)) && IS_SPACE(token[6])) {
+
+      }
+
+      // specular texture
+      if ((0 == strncmp(token, "map_Ks", 6)) && IS_SPACE(token[6])) {
+
+      }
+
+      // specular highlight texture
+      if ((0 == strncmp(token, "map_Ns", 6)) && IS_SPACE(token[6])) {
+
+      }
+
+      // bump texture
+      if (((0 == strncmp(token, "map_bump", 8)) && IS_SPACE(token[8])) ||
+          ((0 == strncmp(token, "map_Bump", 8)) && IS_SPACE(token[8])) ||
+          ((0 == strncmp(token, "bump", 4)) && IS_SPACE(token[4]))
+      ) {
+
+      }
+
+      // alpha texture
+      if ((0 == strncmp(token, "map_d", 5)) && IS_SPACE(token[5])) {
+
+      }
+
+      // displacement texture
+      if ((0 == strncmp(token, "disp", 4)) && IS_SPACE(token[4])) {
+
+      }
+
+      // reflection map
+      if ((0 == strncmp(token, "refl", 4)) && IS_SPACE(token[4])) {
+
+      }
+    }
+
+    // flush last material
+
+    return true;
   }
 
   inline bool parseMat(const std::string& mat_name, const std::string& base_mat_dir, std::vector<material>& materials, std::unordered_map<std::string, int>& material_map) {
