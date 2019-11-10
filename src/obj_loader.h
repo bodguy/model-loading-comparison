@@ -67,7 +67,7 @@ namespace obj_loader {
     return static_cast<parse_option>(static_cast<int>(a) | static_cast<int>(b));
   }
 
-  bool parsePrimitive(shape* shape_group, const primitive_group& prim_group, parse_option flag, const int material_id, const std::string& name) {
+  inline bool parsePrimitive(shape* shape_group, const primitive_group& prim_group, parse_option option, const int material_id, const std::string& name) {
     if (prim_group.is_empty()) {
       return false;
     }
@@ -84,7 +84,7 @@ namespace obj_loader {
           continue;
         }
 
-        if (flag & parse_option::TRIANGULATE) {
+        if (option & parse_option::TRIANGULATE) {
           // @TODO
         } else {
           for (size_t k = 0; k < npolys; k++) {
@@ -99,7 +99,7 @@ namespace obj_loader {
     return true;
   }
 
-  bool fixIndex(int idx, int n, int* ret) {
+  inline bool fixIndex(int idx, int n, int* ret) {
     if (!ret || idx == 0) {
       return false;
     }
@@ -115,7 +115,7 @@ namespace obj_loader {
     return true;
   }
 
-  bool parseIndices(const char** token, int vsize, int vnsize, int vtsize, vertex_index* ret) {
+  inline bool parseIndices(const char** token, int vsize, int vnsize, int vtsize, vertex_index* ret) {
     if (!ret) {
       return false;
     }
@@ -169,7 +169,7 @@ namespace obj_loader {
     return true;
   }
 
-  std::string parseString(const char** token) {
+  inline std::string parseString(const char** token) {
     (*token) += strspn((*token), " \t");
     const char* end = (*token) + strcspn((*token), " \t\r");
     size_t offset = end - (*token);
@@ -186,7 +186,7 @@ namespace obj_loader {
     return str;
   }
 
-  float parseReal(const char** token, float default_value) {
+  inline float parseReal(const char** token, float default_value) {
     (*token) += strspn((*token), " \t");
     const char* end = (*token) + strcspn((*token), " \t\r");
     size_t offset = end - (*token);
@@ -203,7 +203,7 @@ namespace obj_loader {
     return f;
   }
 
-  void parseVT(float* x, float* y, const char** token, parse_option flag,
+  inline void parseVT(float* x, float* y, const char** token, parse_option flag,
                float default_x = 0.f, float default_y = 0.f) {
     (*x) = parseReal(token, default_x);
     if (flag & parse_option::FLIP_UV) {
@@ -213,14 +213,14 @@ namespace obj_loader {
     }
   }
 
-  void parseVN(float* x, float* y, float* z, const char** token,
+  inline void parseVN(float* x, float* y, float* z, const char** token,
                float default_x = 0.f, float default_y = 0.f, float default_z = 0.f) {
     (*x) = parseReal(token, default_x);
     (*y) = parseReal(token, default_y);
     (*z) = parseReal(token, default_z);
   }
 
-  void parseV(float* x, float* y, float* z, float* w, const char** token,
+  inline void parseV(float* x, float* y, float* z, float* w, const char** token,
               float default_x = 0.f, float default_y = 0.f, float default_z = 0.f, float default_w = 1.f) {
     (*x) = parseReal(token, default_x);
     (*y) = parseReal(token, default_y);
@@ -228,7 +228,7 @@ namespace obj_loader {
     (*w) = parseReal(token, default_w);
   }
 
-  std::istream& getline(std::istream& is, std::string& t) {
+  inline std::istream& getline(std::istream& is, std::string& t) {
     t.clear();
 
     // The characters in the stream are read one-by-one using a std::streambuf.
@@ -260,11 +260,29 @@ namespace obj_loader {
     }
   }
 
-  bool endsWith(const std::string& str, const std::string& suffix) {
+  inline bool endsWith(const std::string& str, const std::string& suffix) {
     return str.size() >= suffix.size() && 0 == str.compare(str.size()-suffix.size(), suffix.size(), suffix);
   }
 
-  void splitStr(std::vector<std::string>& elems, const char* delims, const char** token) {
+  inline std::string substr_before_slash(const std::string& path) {
+    const size_t last_slash_idx = path.find_last_of("\\/");
+    if (std::string::npos != last_slash_idx) {
+      return path.substr(0, last_slash_idx + 1);
+    }
+
+    return std::string("");
+  }
+
+  inline std::string substr_after_slash(const std::string& path) {
+    const size_t last_slash_idx = path.find_last_of("\\/");
+    if (std::string::npos != last_slash_idx) {
+      return path.substr(last_slash_idx + 1);
+    }
+
+    return path;
+  }
+
+  inline void splitStr(std::vector<std::string>& elems, const char* delims, const char** token) {
     const char* end = (*token) + strcspn((*token), "\n\r");
     size_t offset = end - (*token);
     if (offset != 0) {
@@ -273,20 +291,31 @@ namespace obj_loader {
       *(dest + offset) = 0;
       const char* pch = strtok(dest, delims);
       while (pch != nullptr) {
-        elems.emplace_back(pch);
+        // trim relative path slash
+        elems.emplace_back(substr_after_slash(pch));
         pch = strtok(nullptr, delims);
       }
       free(dest);
     }
   }
 
-  bool parseMat(const std::string& mat_name, const std::vector<material>& materials, const std::unordered_map<std::string, int>& material_map) {
+  inline void load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream &is) {
+    // @TODO
+  }
+
+  inline bool parseMat(const std::string& mat_name, const std::string& base_mat_dir, std::vector<material>& materials, std::unordered_map<std::string, int>& material_map) {
+    const char* mat_dir = (base_mat_dir + mat_name).c_str();
+    std::ifstream ifs(mat_dir);
+    if (!ifs) {
+      return false;
+    }
+    load_mtl(materials, material_map, ifs);
     return true;
   }
 
-// NOTE: Geometry entities other than "facets" (including "points", "lines", "curves", etc.) are not supported.
-// smooth group is also not supported.
-  bool load_obj(const std::string& path, std::vector<shape>& shapes, parse_option flag) {
+  // NOTE: Geometry entities other than "facets" (including "points", "lines", "curves", etc.) are not supported.
+  // smooth group is also not supported.
+  bool load_obj(const std::string& path, std::vector<shape>& shapes, parse_option parseOption) {
     if (!endsWith(path, ".obj")) {
       return false;
     }
@@ -306,6 +335,7 @@ namespace obj_loader {
     std::unordered_map<std::string, int> material_map;
     std::vector<material> materials;
     int current_material_id = -1;
+    std::string mtl_base_dir = substr_before_slash(path);
     std::string line_buf;
 
     while(!getline(ifs, line_buf).eof()) {
@@ -355,7 +385,7 @@ namespace obj_loader {
       if (token[0] == 'v' && token[1] == 't' && IS_SPACE((token[2]))) {
         token += 3;
         float x,y;
-        parseVT(&x, &y, &token, flag);
+        parseVT(&x, &y, &token, parseOption);
         texcoords.emplace_back(x,y);
         continue;
       }
@@ -399,7 +429,7 @@ namespace obj_loader {
         // check current material and previous
         if (new_material_id != current_material_id) {
           // just make group and don't push it to shapes
-          parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
+          parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name); // return value not used
           // clear current primitives shape groups
           prim_group.face_group.clear();
           // cache new material id
@@ -414,9 +444,9 @@ namespace obj_loader {
         std::vector<std::string> filenames;
         // parse multiple mtl filenames split by whitespace
         splitStr(filenames, " ", &token);
-        // load at least one mtl file in the list
-        for (auto& name : filenames) {
-          if (parseMat(name, materials, material_map)) {
+        // load just one available mtl file in the list
+        for (std::string& name : filenames) {
+          if (parseMat(name, mtl_base_dir, materials, material_map)) {
             break;
           }
         }
@@ -425,7 +455,7 @@ namespace obj_loader {
 
       // group name
       if (token[0] == 'g' && IS_SPACE((token[1]))) {
-        parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
+        parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name); // return value not used
         if (!shape_group.mesh_group.indices.empty()) {
           shapes.emplace_back(shape_group);
         }
@@ -458,7 +488,7 @@ namespace obj_loader {
 
       // object name
       if (token[0] == 'o' && IS_SPACE((token[1]))) {
-        parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name); // return value not used
+        parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name); // return value not used
         if (!shape_group.mesh_group.indices.empty()) {
           shapes.emplace_back(shape_group);
         }
@@ -484,7 +514,7 @@ namespace obj_loader {
       return false;
     }
 
-    bool ret = parsePrimitive(&shape_group, prim_group, flag, current_material_id, current_object_name);
+    bool ret = parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name);
     if (ret || !shape_group.mesh_group.indices.empty()) {
       shapes.emplace_back(shape_group);
     }
