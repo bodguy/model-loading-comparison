@@ -101,7 +101,7 @@ namespace obj_loader {
     float ior; // index of refraction
     float dissolve; // 1 == opaque; 0 == fully transparent
     int illum; // illumination model
-    my_unordered_map<tex_type , texture> texture_map;
+    my_unordered_map<tex_type, texture> texture_map;
   };
 
   enum class parse_option {
@@ -279,11 +279,6 @@ namespace obj_loader {
     (*y) = parseReal(token, default_y);
     (*z) = parseReal(token, default_z);
     (*w) = parseReal(token, default_w);
-  }
-
-  inline void parseReal2(float* r, float* g, const char** token) {
-    (*r) = parseReal(token, 0.f);
-    (*g) = parseReal(token, 0.f);
   }
 
   inline void parseReal3(float* r, float* g, float* b, const char** token) {

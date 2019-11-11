@@ -15,8 +15,8 @@
 #endif
 
 #ifdef ASSIMP_PROFILE
-void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh, bool res) {
-  std::cout << "total mesh count (" << name << "): " << mesh.size() << " (" << std::boolalpha << res << ")" << '\n';
+void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh, bool res, float elapsed) {
+  std::cout << "total mesh count (" << name << "): " << mesh.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
   for (auto m : mesh) {
     delete m;
     m = nullptr;
@@ -26,27 +26,29 @@ void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh, bool re
 #endif
 
 #ifdef TBJ_PROFILE
-void log_mesh_profile(const std::string& name, std::vector<tinyobj::shape_t>& sh, bool res) {
-  std::cout << "total mesh count (" << name << "): " << sh.size() << " (" << std::boolalpha << res << ")" << '\n';
+void log_mesh_profile(const std::string& name, std::vector<tinyobj::shape_t>& sh, bool res, float elapsed) {
+  std::cout << "total mesh count (" << name << "): " << sh.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
   sh.clear();
 }
 #endif
 
 #ifdef OBJL_PROFILE
-void log_mesh_profile(const std::string& name, objl::Loader& loader, bool res) {
-  std::cout << "total mesh count (" << name << "): " << loader.LoadedMeshes.size() << " (" << std::boolalpha << res << ")" << '\n';
+void log_mesh_profile(const std::string& name, objl::Loader& loader, bool res, float elapsed) {
+  std::cout << "total mesh count (" << name << "): " << loader.LoadedMeshes.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
 }
 #endif
 
 #ifdef MY_PROFILE
-void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh, bool res) {
-  std::cout << "total mesh count (" << name << "): " << sh.size() << " (" << std::boolalpha << res << ")" << '\n';
+void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh, bool res, float elapsed) {
+  std::cout << "total mesh count (" << name << "): " << sh.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
   sh.clear();
 }
 #endif
 
 int main() {
-  std::vector<std::string> file_list = { "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj" };
+  std::vector<std::string> file_list = {
+    "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "budda.obj", "dragon.obj", "monkey.obj"
+  };
   std::vector<float> time_accumulate;
   StopWatch watch;
   float average = 0.f;
@@ -58,34 +60,15 @@ int main() {
     watch.start();
     bool res = load_model("../res/" + str, mesh_assimp);
     watch.stop();
-    time_accumulate.push_back(watch.milli());
-    log_mesh_profile(str, mesh_assimp, res);
+    float elapsed = watch.milli();
+    time_accumulate.push_back(elapsed);
+    log_mesh_profile(str, mesh_assimp, res, elapsed);
   }
   for (auto& t : time_accumulate) {
     average += t;
   }
   average /= time_accumulate.size();
-  std::cout << "elapsed time (ASSIMP): " << average << " ms" << '\n';
-  std::cout << "===========================================" << '\n';
-  time_accumulate.clear();
-#endif
-
-#ifdef MY_PROFILE
-  // my loader
-  std::vector<obj_loader::shape> shape_out;
-  for (auto& str : file_list) {
-    watch.start();
-    bool res = load_obj("../res/" + str, shape_out, obj_loader::parse_option::FLIP_UV);
-    watch.stop();
-    time_accumulate.push_back(watch.milli());
-    log_mesh_profile(str, shape_out, res);
-  }
-  average = 0.f;
-  for (auto& t : time_accumulate) {
-    average += t;
-  }
-  average /= time_accumulate.size();
-  std::cout << "elapsed time (OBJ): " << average << " ms" << '\n';
+  std::cout << "average elapsed time (ASSIMP): " << average << " ms" << '\n';
   std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 #endif
@@ -102,15 +85,37 @@ int main() {
     watch.start();
     bool res = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, ("../res/" + str).c_str());
     watch.stop();
-    time_accumulate.push_back(watch.milli());
-    log_mesh_profile(str, shapes, res);
+    float elapsed = watch.milli();
+    time_accumulate.push_back(elapsed);
+    log_mesh_profile(str, shapes, res, elapsed);
   }
   average = 0.f;
   for (auto& t : time_accumulate) {
     average += t;
   }
   average /= time_accumulate.size();
-  std::cout << "elapsed time (TBL): " << average << " ms" << '\n';
+  std::cout << "average elapsed time (TBL): " << average << " ms" << '\n';
+  std::cout << "===========================================" << '\n';
+  time_accumulate.clear();
+#endif
+
+#ifdef MY_PROFILE
+  // my loader
+  std::vector<obj_loader::shape> shape_out;
+  for (auto& str : file_list) {
+    watch.start();
+    bool res = load_obj("../res/" + str, shape_out, obj_loader::parse_option::FLIP_UV);
+    watch.stop();
+    float elapsed = watch.milli();
+    time_accumulate.push_back(elapsed);
+    log_mesh_profile(str, shape_out, res, elapsed);
+  }
+  average = 0.f;
+  for (auto& t : time_accumulate) {
+    average += t;
+  }
+  average /= time_accumulate.size();
+  std::cout << "average elapsed time (OBJ): " << average << " ms" << '\n';
   std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 #endif
@@ -122,15 +127,16 @@ int main() {
     objl::Loader Loader;
     bool res = Loader.LoadFile("../res/" + str);
     watch.stop();
-    time_accumulate.push_back(watch.milli());
-    log_mesh_profile(str, Loader, res);
+    float elapsed = watch.milli();
+    time_accumulate.push_back(elapsed);
+    log_mesh_profile(str, Loader, res, elapsed);
   }
   average = 0.f;
   for (auto& t : time_accumulate) {
     average += t;
   }
   average /= time_accumulate.size();
-  std::cout << "elapsed time (OBJL): " << average << " ms" << '\n';
+  std::cout << "average elapsed time (OBJL): " << average << " ms" << '\n';
   std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 #endif
