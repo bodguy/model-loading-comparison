@@ -10,6 +10,7 @@
 #include <sstream>
 #include <algorithm>
 #include <unordered_map>
+#include <type_traits>
 #include "common.h"
 
 #define IS_SPACE(x) (((x) == ' ') || ((x) == '\t'))
@@ -59,6 +60,13 @@ namespace obj_loader {
     texture_option option;
   };
 
+  struct enum_class_hash {
+    template<typename T>
+    std::size_t operator()(T t) const {
+      return static_cast<std::size_t>(t);
+    }
+  };
+
   enum class tex_type {
     AMBIENT, // map_Ka
     DIFFUSE, // map_Kd
@@ -66,28 +74,34 @@ namespace obj_loader {
     SPECULAR_HIGHLIGHT, // map_Ns
     BUMP, // map_bump, map_Bump, bump
     DISPLACEMENT, // disp
-    ALPHT, // map_d
+    ALPHA, // map_d
     REFLECTION, // refl
   };
 
-  struct material {
-      material()
-      :name(), ambient(), diffuse(), specular(), transmittance(), emission(),
-        shininess(1.f), ior(1.f), dissolve(1.f), illum(0) {
-        texture_map.clear();
-      }
+  template <typename Key>
+  using HashType = typename std::conditional<std::is_enum<Key>::value, enum_class_hash, std::hash<Key>>::type;
 
-      std::string name;
-      vec3 ambient;
-      vec3 diffuse;
-      vec3 specular;
-      vec3 transmittance;
-      vec3 emission;
-      float shininess;
-      float ior; // index of refraction
-      float dissolve; // 1 == opaque; 0 == fully transparent
-      int illum; // illumination model
-      std::unordered_map<tex_type, texture> texture_map;
+  template <typename Key, typename T>
+  using my_unordered_map = std::unordered_map<Key, T, HashType<Key>>;
+
+  struct material {
+    material()
+    :name(), ambient(), diffuse(), specular(), transmittance(), emission(),
+      shininess(1.f), ior(1.f), dissolve(1.f), illum(0) {
+      texture_map.clear();
+    }
+
+    std::string name;
+    vec3 ambient;
+    vec3 diffuse;
+    vec3 specular;
+    vec3 transmittance;
+    vec3 emission;
+    float shininess;
+    float ior; // index of refraction
+    float dissolve; // 1 == opaque; 0 == fully transparent
+    int illum; // illumination model
+    my_unordered_map<tex_type , texture> texture_map;
   };
 
   enum class parse_option {
