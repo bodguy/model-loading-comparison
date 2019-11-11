@@ -71,6 +71,13 @@ namespace obj_loader {
   };
 
   struct material {
+      material()
+      :name(), ambient(), diffuse(), specular(), transmittance(), emission(),
+        shininess(1.f), ior(1.f), dissolve(1.f), illum(0) {
+        texture_map.clear();
+      }
+
+      std::string name;
       vec3 ambient;
       vec3 diffuse;
       vec3 specular;
@@ -260,6 +267,24 @@ namespace obj_loader {
     (*w) = parseReal(token, default_w);
   }
 
+  inline void parseReal2(float* r, float* g, const char** token) {
+    (*r) = parseReal(token, 0.f);
+    (*g) = parseReal(token, 0.f);
+  }
+
+  inline void parseReal3(float* r, float* g, float* b, const char** token) {
+    (*r) = parseReal(token, 0.f);
+    (*g) = parseReal(token, 0.f);
+    (*b) = parseReal(token, 0.f);
+  }
+
+  inline int parseInt(const char **token) {
+    (*token) += strspn((*token), " \t");
+    int i = atoi((*token));
+    (*token) += strcspn((*token), " \t\r");
+    return i;
+  }
+
   inline std::istream& getline(std::istream& is, std::string& t) {
     t.clear();
 
@@ -333,9 +358,10 @@ namespace obj_loader {
 
   // NOTE: pbr material not support.
   inline bool load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream &ifs) {
-    // @TODO
-    material mat;
+    material current_mat;
+    bool has_d = false;
     std::string line_buf;
+
     while(!getline(ifs, line_buf).eof()) {
 
       // Trim trailing whitespace.
@@ -368,73 +394,124 @@ namespace obj_loader {
 
       // new mtl
       if ((0 == strncmp(token, "newmtl", 6)) && IS_SPACE((token[6]))) {
+        // save previous material
+        if (!current_mat.name.empty()) {
+          material_map.insert(std::make_pair(current_mat.name, static_cast<int>(materials.size())));
+          materials.emplace_back(current_mat);
+        }
 
+        // reset material
+        current_mat = material();
+        has_d = false;
+
+        // parse new mat name
+        token += 7;
+        current_mat.name = parseString(&token);
+        continue;
       }
 
       // ambient
       if (token[0] == 'K' && token[1] == 'a' && IS_SPACE((token[2]))) {
         token += 2;
+        float r,g,b;
+        parseReal3(&r, &g, &b, &token);
+        current_mat.ambient = vec3(r, g, b);
+        continue;
       }
 
       // diffuse
       if (token[0] == 'K' && token[1] == 'd' && IS_SPACE((token[2]))) {
         token += 2;
+        float r,g,b;
+        parseReal3(&r, &g, &b, &token);
+        current_mat.diffuse = vec3(r, g, b);
+        continue;
       }
 
       // specular
       if (token[0] == 'K' && token[1] == 's' && IS_SPACE((token[2]))) {
         token += 2;
+        float r,g,b;
+        parseReal3(&r, &g, &b, &token);
+        current_mat.specular = vec3(r, g, b);
+        continue;
       }
 
       // transmittance
       if ((token[0] == 'K' && token[1] == 't' && IS_SPACE((token[2]))) ||
           (token[0] == 'T' && token[1] == 'f' && IS_SPACE((token[2])))) {
-
+        token += 2;
+        float r,g,b;
+        parseReal3(&r, &g, &b, &token);
+        current_mat.transmittance = vec3(r, g, b);
+        continue;
       }
 
       // ior(index of refraction)
       if (token[0] == 'N' && token[1] == 'i' && IS_SPACE((token[2]))) {
-
+        token += 2;
+        current_mat.ior = parseReal(&token, 0.f);
+        continue;
       }
 
       // emission
       if (token[0] == 'K' && token[1] == 'e' && IS_SPACE(token[2])) {
-
+        token += 2;
+        float r,g,b;
+        parseReal3(&r, &g, &b, &token);
+        current_mat.emission = vec3(r, g, b);
+        continue;
       }
 
       // shininess
       if (token[0] == 'N' && token[1] == 's' && IS_SPACE(token[2])) {
-
+        token += 2;
+        current_mat.shininess = parseReal(&token, 0.f);
+        continue;
       }
 
       // illum model
       if (0 == strncmp(token, "illum", 5) && IS_SPACE(token[5])) {
-
+        token += 6;
+        current_mat.illum = parseInt(&token);
+        continue;
       }
 
-      // dissolve
+      // dissolve (the non-transparency of the material), The default is 1.0 (not transparent at all)
       if ((token[0] == 'd' && IS_SPACE(token[1]))) {
+        token += 1;
+        current_mat.dissolve = parseReal(&token, 1.f);
+        has_d = true;
+        continue;
+      }
 
+      // dissolve (the transparency of the material): 1.0 - Tr, The default is 0.0 (not transparent at all)
+      if (token[0] == 'T' && token[1] == 'r' && IS_SPACE(token[2])) {
+        token += 2;
+        if (!has_d) {
+          current_mat.dissolve = 1.f - parseReal(&token, 0.f);
+        }
+        continue;
       }
 
       // ambient texture
       if ((0 == strncmp(token, "map_Ka", 6)) && IS_SPACE(token[6])) {
-
+        continue;
       }
 
       // diffuse texture
       if ((0 == strncmp(token, "map_Kd", 6)) && IS_SPACE(token[6])) {
-
+        continue;
       }
 
       // specular texture
       if ((0 == strncmp(token, "map_Ks", 6)) && IS_SPACE(token[6])) {
-
+        continue;
       }
 
       // specular highlight texture
       if ((0 == strncmp(token, "map_Ns", 6)) && IS_SPACE(token[6])) {
-
+        continue;
       }
 
       // bump texture
@@ -442,22 +519,22 @@ namespace obj_loader {
           ((0 == strncmp(token, "map_Bump", 8)) && IS_SPACE(token[8])) ||
           ((0 == strncmp(token, "bump", 4)) && IS_SPACE(token[4]))
       ) {
-
+        continue;
       }
 
       // alpha texture
       if ((0 == strncmp(token, "map_d", 5)) && IS_SPACE(token[5])) {
-
+        continue;
       }
 
       // displacement texture
       if ((0 == strncmp(token, "disp", 4)) && IS_SPACE(token[4])) {
-
+        continue;
       }
 
       // reflection map
       if ((0 == strncmp(token, "refl", 4)) && IS_SPACE(token[4])) {
-
+        continue;
       }
     }
 
@@ -467,8 +544,7 @@ namespace obj_loader {
   }
 
   inline bool parseMat(const std::string& mat_name, const std::string& base_mat_dir, std::vector<material>& materials, std::unordered_map<std::string, int>& material_map) {
-    const char* mat_dir = (base_mat_dir + mat_name).c_str();
-    std::ifstream ifs(mat_dir);
+    std::ifstream ifs(base_mat_dir + mat_name);
     if (!ifs) {
       return false;
     }
@@ -483,7 +559,7 @@ namespace obj_loader {
       return false;
     }
 
-    std::ifstream ifs(path.c_str());
+    std::ifstream ifs(path);
     if(!ifs) {
       return false;
     }
