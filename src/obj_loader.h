@@ -47,8 +47,40 @@ namespace obj_loader {
     mesh mesh_group;
   };
 
-  struct material {
+  struct texture_option {
+    bool clamp;
+    bool blendu;
+    bool blendv;
+    float bump_multiplier;
+  };
 
+  struct texture {
+    std::string path;
+    texture_option option;
+  };
+
+  enum class tex_type {
+    AMBIENT, // map_Ka
+    DIFFUSE, // map_Kd
+    SPECULAR, // map_Ks
+    SPECULAR_HIGHLIGHT, // map_Ns
+    BUMP, // map_bump, map_Bump, bump
+    DISPLACEMENT, // disp
+    ALPHT, // map_d
+    REFLECTION, // refl
+  };
+
+  struct material {
+      vec3 ambient;
+      vec3 diffuse;
+      vec3 specular;
+      vec3 transmittance;
+      vec3 emission;
+      float shininess;
+      float ior; // index of refraction
+      float dissolve; // 1 == opaque; 0 == fully transparent
+      int illum; // illumination model
+      std::unordered_map<tex_type, texture> texture_map;
   };
 
   enum class parse_option {
@@ -302,6 +334,7 @@ namespace obj_loader {
   // NOTE: pbr material not support.
   inline bool load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream &ifs) {
     // @TODO
+    material mat;
     std::string line_buf;
     while(!getline(ifs, line_buf).eof()) {
 
