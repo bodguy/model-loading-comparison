@@ -18,10 +18,10 @@
 
 namespace obj_loader {
   struct vertex_index {
-    int v_idx, vt_idx, vn_idx;
     vertex_index() :v_idx(-1), vt_idx(-1), vn_idx(-1) {}
     explicit vertex_index(int idx) :v_idx(idx), vt_idx(idx), vn_idx(idx) {}
     vertex_index(int vidx, int vtidx, int vnidx) :v_idx(vidx), vt_idx(vtidx), vn_idx(vnidx) {}
+    int v_idx, vt_idx, vn_idx;
   };
 
   struct face {
@@ -48,12 +48,35 @@ namespace obj_loader {
     mesh mesh_group;
   };
 
+  enum class texture_face_type {
+    TEX_2D,
+    TEX_SPHERE,
+    TEX_3D_CUBE_TOP,
+    TEX_3D_CUBE_BOTTOM,
+    TEX_3D_CUBE_FRONT,
+    TEX_3D_CUBE_BACK,
+    TEX_3D_CUBE_LEFT,
+    TEX_3D_CUBE_RIGHT
+  };
+
   struct texture_option {
-    texture_option() : clamp(true), blendu(true), blendv(true), bump_multiplier(1.f) {}
-    bool clamp;
-    bool blendu;
-    bool blendv;
-    float bump_multiplier;
+    texture_option()
+      :clamp(false), blendu(true), blendv(true), bump_multiplier(1.f), sharpness(1.f),
+       brightness(0.f), contrast(1.f), origin_offset(), scale(1.f), turbulence(), imfchan(0), face_type(texture_face_type::TEX_2D)
+    {}
+    bool clamp; // -clamp (default false)
+    bool blendu; // -blendu (default true)
+    bool blendv; // -blendv (default true)
+    float bump_multiplier; // -bm (for bump maps only, default 1.0)
+    float sharpness; // -boost (default 1.0)
+    float brightness; // first -mm option (default 0.0)
+    float contrast; // second -mm option (default 1.0)
+    vec3 origin_offset; // -o u [v [w]] (default 0 0 0)
+    vec3 scale; // -s u [v [w]] (default 1 1 1)
+    vec3 turbulence; // -t u [v [w]] (default 0 0 0)
+    char imfchan; // -imfchan (image file channel) r | g | b | m | l | z
+    // bump default l, decal default m
+    texture_face_type face_type;
   };
 
   struct texture {
@@ -375,19 +398,36 @@ namespace obj_loader {
       token += strspn(token, " \t");  // skip space
       if ((0 == strncmp(token, "-clamp", 6)) && IS_SPACE((token[6]))) {
         token += 7;
-        tex->option.clamp = parseOnOff(&token, /* default */ true);
+        tex->option.clamp = parseOnOff(&token, true);
       } else if ((0 == strncmp(token, "-blendu", 7)) && IS_SPACE((token[7]))) {
         token += 8;
-        tex->option.blendu = parseOnOff(&token, /* default */ true);
+        tex->option.blendu = parseOnOff(&token, true);
       } else if ((0 == strncmp(token, "-blendv", 7)) && IS_SPACE((token[7]))) {
         token += 8;
-        tex->option.blendv = parseOnOff(&token, /* default */ true);
+        tex->option.blendv = parseOnOff(&token, true);
       } else if ((0 == strncmp(token, "-bm", 3)) && IS_SPACE((token[3]))) {
         token += 4;
         tex->option.bump_multiplier = parseReal(&token, 1.f);
+      } else if ((0 == strncmp(token, "-boost", 6)) && IS_SPACE((token[6]))) {
+        token += 7;
+      } else if ((0 == strncmp(token, "-mm", 3)) && IS_SPACE((token[3]))) {
+        token += 4;
+      } else if ((0 == strncmp(token, "-o", 2)) && IS_SPACE((token[2]))) {
+        token += 3;
+      } else if ((0 == strncmp(token, "-s", 2)) && IS_SPACE((token[2]))) {
+        token += 3;
+      } else if ((0 == strncmp(token, "-t", 2)) && IS_SPACE((token[2]))) {
+        token += 3;
+      } else if ((0 == strncmp(token, "-imfchan", 8)) && IS_SPACE((token[8]))) {
+        token += 9;
+      } else if ((0 == strncmp(token, "-type", 5)) && IS_SPACE((token[5]))) {
+        token += 5;
       } else {
         // only texture name without any options
         tex->path = parseString(&token);
+        if (tex->path.empty()) {
+          return false;
+        }
       }
     }
 

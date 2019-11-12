@@ -12,20 +12,21 @@ struct vec4 {
 };
 
 struct vec3 {
-    vec3() :x(0), y(0), z(0) {}
-    vec3(float tx, float ty,  float tz) { x = tx; y = ty; z = tz; }
-    float x, y, z;
+  vec3() :x(0), y(0), z(0) {}
+  vec3(float f) :x(f), y(f), z(f) {}
+  vec3(float tx, float ty,  float tz) { x = tx; y = ty; z = tz; }
+  float x, y, z;
 };
 
 struct vec2 {
-    vec2() :x(0), y(0) {}
-    vec2(float tx, float ty) { x = tx; y = ty; }
-    float x, y;
+  vec2() :x(0), y(0) {}
+  vec2(float tx, float ty) { x = tx; y = ty; }
+  float x, y;
 };
 
 struct vertex {
-    vec3 pos, normal;
-    vec2 tex_coords;
+  vec3 pos, normal;
+  vec2 tex_coords;
 };
 
 struct texture {
