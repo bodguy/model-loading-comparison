@@ -49,6 +49,7 @@ namespace obj_loader {
   };
 
   struct texture_option {
+    texture_option() : clamp(true), blendu(true), blendv(true), bump_multiplier(1.f) {}
     bool clamp;
     bool blendu;
     bool blendv;
@@ -56,6 +57,7 @@ namespace obj_loader {
   };
 
   struct texture {
+    texture() : path(), option() {}
     std::string path;
     texture_option option;
   };
@@ -109,7 +111,8 @@ namespace obj_loader {
     TRIANGULATE = 1 << 0,
     FLIP_UV = 1 << 1,
     CALC_TANGENT = 1 << 2, // @TODO
-    CALC_NORMAL = 1 << 3 // @TODO
+    CALC_NORMAL = 1 << 3, // @TODO
+    COMBINE_SUBMESHES = 1 << 4 // @TODO
   };
 
   bool operator&(const parse_option a, const parse_option b) {
@@ -352,6 +355,45 @@ namespace obj_loader {
     }
   }
 
+  inline bool parseOnOff(const char** token, bool default_value) {
+    (*token) += strspn((*token), " \t");
+    const char *end = (*token) + strcspn((*token), " \t\r");
+
+    bool ret = default_value;
+    if ((0 == strncmp((*token), "on", 2))) {
+      ret = true;
+    } else if ((0 == strncmp((*token), "off", 3))) {
+      ret = false;
+    }
+
+    (*token) = end;
+    return ret;
+  }
+
+  inline bool parseTexture(texture* tex, const char* token) {
+    while (!IS_NEW_LINE((*token))) {
+      token += strspn(token, " \t");  // skip space
+      if ((0 == strncmp(token, "-clamp", 6)) && IS_SPACE((token[6]))) {
+        token += 7;
+        tex->option.clamp = parseOnOff(&token, /* default */ true);
+      } else if ((0 == strncmp(token, "-blendu", 7)) && IS_SPACE((token[7]))) {
+        token += 8;
+        tex->option.blendu = parseOnOff(&token, /* default */ true);
+      } else if ((0 == strncmp(token, "-blendv", 7)) && IS_SPACE((token[7]))) {
+        token += 8;
+        tex->option.blendv = parseOnOff(&token, /* default */ true);
+      } else if ((0 == strncmp(token, "-bm", 3)) && IS_SPACE((token[3]))) {
+        token += 4;
+        tex->option.bump_multiplier = parseReal(&token, 1.f);
+      } else {
+        // only texture name without any options
+        tex->path = parseString(&token);
+      }
+    }
+
+    return true;
+  }
+
   // NOTE: pbr material not support.
   inline bool load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream &ifs) {
     material current_mat;
@@ -492,21 +534,43 @@ namespace obj_loader {
 
       // ambient texture
       if ((0 == strncmp(token, "map_Ka", 6)) && IS_SPACE(token[6])) {
+        token += 7;
+        texture ambient;
+        if (parseTexture(&ambient, token)) {
+          current_mat.texture_map.insert(std::make_pair(tex_type::AMBIENT, ambient));
+        }
         continue;
       }
 
       // diffuse texture
       if ((0 == strncmp(token, "map_Kd", 6)) && IS_SPACE(token[6])) {
+        token += 7;
+        texture diffuse;
+        if (parseTexture(&diffuse, token)) {
+          current_mat.texture_map.insert(std::make_pair(tex_type::DIFFUSE, diffuse));
+        }
         continue;
       }
 
       // specular texture
       if ((0 == strncmp(token, "map_Ks", 6)) && IS_SPACE(token[6])) {
+        token += 7;
+        texture specular;
+        if (parseTexture(&specular, token)) {
+          current_mat.texture_map.insert(std::make_pair(tex_type::SPECULAR, specular));
+        }
         continue;
       }
 
       // specular highlight texture
       if ((0 == strncmp(token, "map_Ns", 6)) && IS_SPACE(token[6])) {
+        token += 7;
+        texture specular_highlight;
+        if (parseTexture(&specular_highlight, token)) {
+          current_mat.texture_map.insert(
+            std::make_pair(tex_type::SPECULAR_HIGHLIGHT, specular_highlight)
+          );
+        }
         continue;
       }
 
