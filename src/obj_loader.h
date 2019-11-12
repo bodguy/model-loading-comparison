@@ -36,16 +36,11 @@ namespace obj_loader {
   };
 
   struct mesh {
-    mesh() :indices(), num_face_vertices() { indices.clear(); num_face_vertices.clear(); }
+    mesh() :name(), indices(), num_face_vertices(), material_ids() { indices.clear(); num_face_vertices.clear(); material_ids.clear(); }
+    std::string name;
     std::vector<vertex_index> indices;
     std::vector<unsigned char> num_face_vertices; // 3: tri, 4: quad etc... Up to 255 vertices per face
     std::vector<int> material_ids; // per face material IDs
-  };
-
-  struct shape {
-    shape() :name(), mesh_group() {}
-    std::string name;
-    mesh mesh_group;
   };
 
   enum class texture_face_type {
@@ -62,34 +57,27 @@ namespace obj_loader {
   struct texture_option {
     texture_option()
       :clamp(false), blendu(true), blendv(true), bump_multiplier(1.f), sharpness(1.f),
-       brightness(0.f), contrast(1.f), origin_offset(), scale(1.f), turbulence(), imfchan(0), face_type(texture_face_type::TEX_2D)
+       brightness(0.f), contrast(1.f), origin_offset(), scale(1.f), turbulence(), imfchan('m'), face_type(texture_face_type::TEX_2D)
     {}
     bool clamp; // -clamp (default false)
     bool blendu; // -blendu (default true)
     bool blendv; // -blendv (default true)
     float bump_multiplier; // -bm (for bump maps only, default 1.0)
     float sharpness; // -boost (default 1.0)
-    float brightness; // first -mm option (default 0.0)
-    float contrast; // second -mm option (default 1.0)
+    float brightness; // base_value -mm option (default 0.0)
+    float contrast; // gain_value -mm option (default 1.0)
     vec3 origin_offset; // -o u [v [w]] (default 0 0 0)
     vec3 scale; // -s u [v [w]] (default 1 1 1)
     vec3 turbulence; // -t u [v [w]] (default 0 0 0)
     char imfchan; // -imfchan (image file channel) r | g | b | m | l | z
     // bump default l, decal default m
-    texture_face_type face_type;
+    texture_face_type face_type; // texture type for specular map only (default: 2D texture)
   };
 
   struct texture {
     texture() : path(), option() {}
     std::string path;
     texture_option option;
-  };
-
-  struct enum_class_hash {
-    template<typename T>
-    std::size_t operator()(T t) const {
-      return static_cast<std::size_t>(t);
-    }
   };
 
   enum class tex_type {
@@ -101,6 +89,13 @@ namespace obj_loader {
     DISPLACEMENT, // disp
     ALPHA, // map_d
     REFLECTION, // refl
+  };
+
+  struct enum_class_hash {
+    template<typename T>
+    std::size_t operator()(T t) const {
+      return static_cast<std::size_t>(t);
+    }
   };
 
   template <typename Key>
@@ -132,10 +127,7 @@ namespace obj_loader {
   enum class parse_option {
     NONE = 0,
     TRIANGULATE = 1 << 0,
-    FLIP_UV = 1 << 1,
-    CALC_TANGENT = 1 << 2, // @TODO
-    CALC_NORMAL = 1 << 3, // @TODO
-    COMBINE_SUBMESHES = 1 << 4 // @TODO
+    FLIP_UV = 1 << 1
   };
 
   inline bool operator&(const parse_option a, const parse_option b) {
@@ -146,11 +138,11 @@ namespace obj_loader {
     return static_cast<parse_option>(static_cast<int>(a) | static_cast<int>(b));
   }
 
-  inline bool parsePrimitive(shape* shape_group, const primitive_group& prim_group, parse_option option, const int material_id, const std::string& name) {
+  inline bool parsePrimitive(mesh& m, const primitive_group& prim_group, parse_option option, const int material_id, const std::string& name) {
     if (prim_group.is_empty()) {
       return false;
     }
-    shape_group->name = name;
+    m.name = name;
 
     // make polygon
     if (!prim_group.face_group.empty()) {
@@ -167,10 +159,10 @@ namespace obj_loader {
           // @TODO
         } else {
           for (size_t k = 0; k < npolys; k++) {
-            shape_group->mesh_group.indices.emplace_back(face_group.vertex_indices[k]);
+            m.indices.emplace_back(face_group.vertex_indices[k]);
           }
-          shape_group->mesh_group.num_face_vertices.emplace_back(static_cast<unsigned char>(npolys));
-          shape_group->mesh_group.material_ids.emplace_back(material_id);
+          m.num_face_vertices.emplace_back(static_cast<unsigned char>(npolys));
+          m.material_ids.emplace_back(material_id);
         }
       }
     }
@@ -401,19 +393,19 @@ namespace obj_loader {
     const char *end = (*token) + strcspn((*token), " \t\r");
     texture_face_type tft = default_type;
 
-    if ((0 == strncmp((*token), "cube_top", strlen("cube_top")))) {
+    if ((0 == strncmp((*token), "cube_top", 8))) {
       tft = texture_face_type::TEX_3D_CUBE_TOP;
-    } else if ((0 == strncmp((*token), "cube_bottom", strlen("cube_bottom")))) {
+    } else if ((0 == strncmp((*token), "cube_bottom", 11))) {
       tft = texture_face_type::TEX_3D_CUBE_BOTTOM;
-    } else if ((0 == strncmp((*token), "cube_left", strlen("cube_left")))) {
+    } else if ((0 == strncmp((*token), "cube_left", 9))) {
       tft = texture_face_type::TEX_3D_CUBE_LEFT;
-    } else if ((0 == strncmp((*token), "cube_right", strlen("cube_right")))) {
+    } else if ((0 == strncmp((*token), "cube_right", 10))) {
       tft = texture_face_type::TEX_3D_CUBE_RIGHT;
-    } else if ((0 == strncmp((*token), "cube_front", strlen("cube_front")))) {
+    } else if ((0 == strncmp((*token), "cube_front", 10))) {
       tft = texture_face_type::TEX_3D_CUBE_FRONT;
-    } else if ((0 == strncmp((*token), "cube_back", strlen("cube_back")))) {
+    } else if ((0 == strncmp((*token), "cube_back", 9))) {
       tft = texture_face_type::TEX_3D_CUBE_BACK;
-    } else if ((0 == strncmp((*token), "sphere", strlen("sphere")))) {
+    } else if ((0 == strncmp((*token), "sphere", 6))) {
       tft = texture_face_type::TEX_3D_SPHERE;
     }
 
@@ -421,47 +413,52 @@ namespace obj_loader {
     return tft;
   }
 
-  inline bool parseTexture(texture* tex, const char* token) {
+  inline bool parseTexture(texture& tex, const char* token) {
     while (!IS_NEW_LINE((*token))) {
       token += strspn(token, " \t");  // skip space
       if ((0 == strncmp(token, "-clamp", 6)) && IS_SPACE((token[6]))) {
         token += 7;
-        tex->option.clamp = parseOnOff(&token, true);
+        tex.option.clamp = parseOnOff(&token, true);
       } else if ((0 == strncmp(token, "-blendu", 7)) && IS_SPACE((token[7]))) {
         token += 8;
-        tex->option.blendu = parseOnOff(&token, true);
+        tex.option.blendu = parseOnOff(&token, true);
       } else if ((0 == strncmp(token, "-blendv", 7)) && IS_SPACE((token[7]))) {
         token += 8;
-        tex->option.blendv = parseOnOff(&token, true);
+        tex.option.blendv = parseOnOff(&token, true);
       } else if ((0 == strncmp(token, "-bm", 3)) && IS_SPACE((token[3]))) {
         token += 4;
-        tex->option.bump_multiplier = parseReal(&token, 1.f);
+        tex.option.bump_multiplier = parseReal(&token, 1.f);
       } else if ((0 == strncmp(token, "-boost", 6)) && IS_SPACE((token[6]))) {
         token += 7;
-        tex->option.sharpness = parseReal(&token, 1.f);
+        tex.option.sharpness = parseReal(&token, 1.f);
       } else if ((0 == strncmp(token, "-mm", 3)) && IS_SPACE((token[3]))) {
         token += 4;
-        tex->option.brightness = parseReal(&token, 0.f);
-        tex->option.contrast = parseReal(&token, 1.f);
+        tex.option.brightness = parseReal(&token, 0.f);
+        tex.option.contrast = parseReal(&token, 1.f);
       } else if ((0 == strncmp(token, "-o", 2)) && IS_SPACE((token[2]))) {
         token += 3;
-        parseReal3(tex->option.origin_offset, &token);
+        parseReal3(tex.option.origin_offset, &token);
       } else if ((0 == strncmp(token, "-s", 2)) && IS_SPACE((token[2]))) {
         token += 3;
-        parseReal3(tex->option.scale, &token, 1.f, 1.f, 1.f);
+        parseReal3(tex.option.scale, &token, 1.f, 1.f, 1.f);
       } else if ((0 == strncmp(token, "-t", 2)) && IS_SPACE((token[2]))) {
         token += 3;
-        parseReal3(tex->option.turbulence, &token);
+        parseReal3(tex.option.turbulence, &token);
       } else if ((0 == strncmp(token, "-imfchan", 8)) && IS_SPACE((token[8]))) {
         token += 9;
-        // @TODO
+        token += strspn(token, " \t");
+        const char *end = token + strcspn(token, " \t\r");
+        if ((end - token) == 1) {  // Assume one char for -imfchan
+          tex.option.imfchan = (*token);
+        }
+        token = end;
       } else if ((0 == strncmp(token, "-type", 5)) && IS_SPACE((token[5]))) {
         token += 5;
-        tex->option.face_type = parseTextureOption(&token, texture_face_type::TEX_2D);
+        tex.option.face_type = parseTextureOption(&token, texture_face_type::TEX_2D);
       } else {
         // parse texture name at last.
-        tex->path = parseString(&token);
-        if (tex->path.empty()) {
+        tex.path = parseString(&token);
+        if (tex.path.empty()) {
           return false;
         }
       }
@@ -471,7 +468,7 @@ namespace obj_loader {
   }
 
   // NOTE: pbr material not support.
-  inline bool load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream &ifs) {
+  inline bool load_mtl(std::vector<material>& materials, std::unordered_map<std::string, int>& material_map, std::istream& ifs) {
     material current_mat;
     bool has_d = false;
     std::string line_buf;
@@ -612,7 +609,7 @@ namespace obj_loader {
       if ((0 == strncmp(token, "map_Ka", 6)) && IS_SPACE(token[6])) {
         token += 7;
         texture ambient;
-        if (parseTexture(&ambient, token)) {
+        if (parseTexture(ambient, token)) {
           current_mat.texture_map.insert(std::make_pair(tex_type::AMBIENT, ambient));
         }
         continue;
@@ -622,7 +619,7 @@ namespace obj_loader {
       if ((0 == strncmp(token, "map_Kd", 6)) && IS_SPACE(token[6])) {
         token += 7;
         texture diffuse;
-        if (parseTexture(&diffuse, token)) {
+        if (parseTexture(diffuse, token)) {
           current_mat.texture_map.insert(std::make_pair(tex_type::DIFFUSE, diffuse));
         }
         continue;
@@ -632,7 +629,7 @@ namespace obj_loader {
       if ((0 == strncmp(token, "map_Ks", 6)) && IS_SPACE(token[6])) {
         token += 7;
         texture specular;
-        if (parseTexture(&specular, token)) {
+        if (parseTexture(specular, token)) {
           current_mat.texture_map.insert(std::make_pair(tex_type::SPECULAR, specular));
         }
         continue;
@@ -642,34 +639,62 @@ namespace obj_loader {
       if ((0 == strncmp(token, "map_Ns", 6)) && IS_SPACE(token[6])) {
         token += 7;
         texture specular_highlight;
-        if (parseTexture(&specular_highlight, token)) {
-          current_mat.texture_map.insert(
-            std::make_pair(tex_type::SPECULAR_HIGHLIGHT, specular_highlight)
-          );
+        if (parseTexture(specular_highlight, token)) {
+          current_mat.texture_map.insert(std::make_pair(tex_type::SPECULAR_HIGHLIGHT, specular_highlight));
         }
         continue;
       }
 
       // bump texture
       if (((0 == strncmp(token, "map_bump", 8)) && IS_SPACE(token[8])) ||
-          ((0 == strncmp(token, "map_Bump", 8)) && IS_SPACE(token[8])) ||
-          ((0 == strncmp(token, "bump", 4)) && IS_SPACE(token[4]))
-      ) {
+          ((0 == strncmp(token, "map_Bump", 8)) && IS_SPACE(token[8]))) {
+        token += 9;
+        texture bump;
+        if (parseTexture(bump, token)) {
+          bump.option.imfchan = 'l';
+          current_mat.texture_map.insert(std::make_pair(tex_type::BUMP, bump));
+        }
+        continue;
+      }
+
+      // another name of bump map texture
+      if ((0 == strncmp(token, "bump", 4)) && IS_SPACE(token[4])) {
+        token += 5;
+        texture bump;
+        if (parseTexture(bump, token)) {
+          bump.option.imfchan = 'l';
+          current_mat.texture_map.insert(std::make_pair(tex_type::BUMP, bump));
+        }
         continue;
       }
 
       // alpha texture
       if ((0 == strncmp(token, "map_d", 5)) && IS_SPACE(token[5])) {
+        token += 6;
+        texture alpha;
+        if (parseTexture(alpha, token)) {
+          current_mat.texture_map.insert(std::make_pair(tex_type::ALPHA, alpha));
+        }
         continue;
       }
 
       // displacement texture
       if ((0 == strncmp(token, "disp", 4)) && IS_SPACE(token[4])) {
+        token += 5;
+        texture displacement;
+        if (parseTexture(displacement, token)) {
+          current_mat.texture_map.insert(std::make_pair(tex_type::DISPLACEMENT, displacement));
+        }
         continue;
       }
 
       // reflection map
       if ((0 == strncmp(token, "refl", 4)) && IS_SPACE(token[4])) {
+        token += 5;
+        texture reflection;
+        if (parseTexture(reflection, token)) {
+          current_mat.texture_map.insert(std::make_pair(tex_type::REFLECTION, reflection));
+        }
         continue;
       }
     }
@@ -690,9 +715,19 @@ namespace obj_loader {
     return true;
   }
 
+  struct scene {
+    scene() : vertices(), texcoords(), normals(), meshes(), material_map(), materials() {}
+    std::vector<vec4> vertices;
+    std::vector<vec2> texcoords;
+    std::vector<vec3> normals;
+    std::vector<mesh> meshes;
+    std::unordered_map<std::string, int> material_map;
+    std::vector<material> materials;
+  };
+
   // NOTE: Geometry entities other than "facets" (including "points", "lines", "curves", etc.) are not supported.
   // smooth group is also not supported.
-  bool load_obj(const std::string& path, std::vector<shape>& shapes, parse_option parseOption) {
+  bool load_obj(const std::string& path, scene& scene_out, parse_option parseOption) {
     if (!endsWith(path, ".obj")) {
       return false;
     }
@@ -702,16 +737,10 @@ namespace obj_loader {
       return false;
     }
 
-    std::vector<vec4> vertices;
-    std::vector<vec2> texcoords;
-    std::vector<vec3> normals;
     primitive_group prim_group;
     std::string current_object_name;
-    int max_vindex = -1, max_vtindex = -1, max_vnindex = -1;
-    shape shape_group;
-    std::unordered_map<std::string, int> material_map;
-    std::vector<material> materials;
-    int current_material_id = -1;
+    mesh current_mesh;
+    int max_vindex = -1, max_vtindex = -1, max_vnindex = -1, current_material_id = -1;
     std::string mtl_base_dir = substr_before_slash(path);
     std::string line_buf;
 
@@ -745,7 +774,7 @@ namespace obj_loader {
         token += 2;
         vec4 v;
         parseReal4(v, &token);
-        vertices.emplace_back(v);
+        scene_out.vertices.emplace_back(v);
         continue;
       }
 
@@ -754,7 +783,7 @@ namespace obj_loader {
         token += 3;
         vec3 vn;
         parseReal3(vn, &token);
-        normals.emplace_back(vn);
+        scene_out.normals.emplace_back(vn);
         continue;
       }
 
@@ -766,7 +795,7 @@ namespace obj_loader {
         if (parseOption & parse_option::FLIP_UV) {
           vt.y = 1.f - vt.y;
         }
-        texcoords.emplace_back(vt);
+        scene_out.texcoords.emplace_back(vt);
         continue;
       }
 
@@ -780,7 +809,7 @@ namespace obj_loader {
 
         while (!IS_NEW_LINE(token[0])) {
           vertex_index vi;
-          if (!parseIndices(&token, vertices.size(), normals.size(), texcoords.size(), &vi)) {
+          if (!parseIndices(&token, scene_out.vertices.size(), scene_out.normals.size(), scene_out.texcoords.size(), &vi)) {
             return false;
           }
           // profile max v,vt,vn index
@@ -803,14 +832,14 @@ namespace obj_loader {
         std::string new_material_name = parseString(&token);
         int new_material_id = -1;
         // found
-        if (material_map.find(new_material_name) != material_map.end()) {
-          new_material_id = material_map[new_material_name];
+        if (scene_out.material_map.find(new_material_name) != scene_out.material_map.end()) {
+          new_material_id = scene_out.material_map[new_material_name];
         }
         // check current material and previous
         if (new_material_id != current_material_id) {
-          // just make group and don't push it to shapes
-          parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name); // return value not used
-          // clear current primitives shape groups
+          // just make group and don't push it to meshes
+          parsePrimitive(current_mesh, prim_group, parseOption, current_material_id, current_object_name); // return value not used
+          // clear current primitives face groups
           prim_group.face_group.clear();
           // cache new material id
           current_material_id = new_material_id;
@@ -826,7 +855,7 @@ namespace obj_loader {
         splitStr(filenames, " ", &token);
         // load just one available mtl file in the list
         for (std::string& name : filenames) {
-          if (parseMat(name, mtl_base_dir, materials, material_map)) {
+          if (parseMat(name, mtl_base_dir, scene_out.materials, scene_out.material_map)) {
             break;
           }
         }
@@ -835,14 +864,14 @@ namespace obj_loader {
 
       // group name
       if (token[0] == 'g' && IS_SPACE((token[1]))) {
-        parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name); // return value not used
-        if (!shape_group.mesh_group.indices.empty()) {
-          shapes.emplace_back(shape_group);
+        parsePrimitive(current_mesh, prim_group, parseOption, current_material_id, current_object_name); // return value not used
+        if (!current_mesh.indices.empty()) {
+          scene_out.meshes.emplace_back(current_mesh);
         }
 
         // reset
         prim_group = primitive_group();
-        shape_group = shape();
+        current_mesh = mesh();
 
         token += 2;
 
@@ -868,14 +897,14 @@ namespace obj_loader {
 
       // object name
       if (token[0] == 'o' && IS_SPACE((token[1]))) {
-        parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name); // return value not used
-        if (!shape_group.mesh_group.indices.empty()) {
-          shapes.emplace_back(shape_group);
+        parsePrimitive(current_mesh, prim_group, parseOption, current_material_id, current_object_name); // return value not used
+        if (!current_mesh.indices.empty()) {
+          scene_out.meshes.emplace_back(current_mesh);
         }
 
         // reset
         prim_group = primitive_group();
-        shape_group = shape();
+        current_mesh = mesh();
 
         token += 2;
         current_object_name = parseString(&token);
@@ -884,19 +913,19 @@ namespace obj_loader {
     }
 
     // check max v,vt,vn is lesser than vertices, texcoords, normals size
-    if (max_vindex >= static_cast<int>(vertices.size())) {
+    if (max_vindex >= static_cast<int>(scene_out.vertices.size())) {
       return false;
     }
-    if (max_vtindex >= static_cast<int>(texcoords.size())) {
+    if (max_vtindex >= static_cast<int>(scene_out.texcoords.size())) {
       return false;
     }
-    if (max_vnindex >= static_cast<int>(normals.size())) {
+    if (max_vnindex >= static_cast<int>(scene_out.normals.size())) {
       return false;
     }
 
-    bool ret = parsePrimitive(&shape_group, prim_group, parseOption, current_material_id, current_object_name);
-    if (ret || !shape_group.mesh_group.indices.empty()) {
-      shapes.emplace_back(shape_group);
+    bool ret = parsePrimitive(current_mesh, prim_group, parseOption, current_material_id, current_object_name);
+    if (ret || !current_mesh.indices.empty()) {
+      scene_out.meshes.emplace_back(current_mesh);
     }
 
     return true;

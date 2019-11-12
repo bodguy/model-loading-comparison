@@ -14,6 +14,14 @@
 #include "obj_loader.h"
 #endif
 
+namespace std {
+  template <typename _CharT, typename _Traits>
+  inline basic_ostream<_CharT, _Traits> &
+  tab(basic_ostream<_CharT, _Traits> &__os) {
+    return __os.put(__os.widen('\t'));
+  }
+}
+
 #ifdef ASSIMP_PROFILE
 void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh, bool res, float elapsed) {
   std::cout << "total mesh count (" << name << "): " << mesh.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
@@ -39,15 +47,22 @@ void log_mesh_profile(const std::string& name, objl::Loader& loader, bool res, f
 #endif
 
 #ifdef MY_PROFILE
-void log_mesh_profile(const std::string& name, std::vector<obj_loader::shape>& sh, bool res, float elapsed) {
-  std::cout << "total mesh count (" << name << "): " << sh.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
-  sh.clear();
+void log_mesh_profile(const std::string& name, const obj_loader::scene& scene, bool res, float elapsed) {
+  std::cout << "mesh count (" << name << "): " << scene.meshes.size() << '\n';
+  std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
+  std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
+  std::cout << std::tab << "vertex count: " << scene.vertices.size() << '\n';
+  std::cout << std::tab << "uv count: " << scene.texcoords.size() << '\n';
+  std::cout << std::tab << "normal count: " << scene.normals.size() << '\n';
+  std::cout << std::tab << "material count: " << scene.materials.size() << '\n';
+  std::cout << "==================================================" << '\n';
 }
 #endif
 
 int main() {
   std::vector<std::string> file_list = {
-    "nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "budda.obj", "dragon.obj", "monkey.obj"
+    "nanosuit/nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
+    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj"
   };
   std::vector<float> time_accumulate;
   StopWatch watch;
@@ -76,18 +91,18 @@ int main() {
 #ifdef TBJ_PROFILE
   // Tiny obj loader
   tinyobj::attrib_t attrib;
-  std::vector<tinyobj::shape_t> shapes;
+  std::vector<tinyobj::shape_t> meshes;
   std::vector<tinyobj::material_t> materials;
   std::string warn;
   std::string err;
 
   for (auto& str : file_list) {
     watch.start();
-    bool res = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, ("../res/" + str).c_str());
+    bool res = tinyobj::LoadObj(&attrib, &meshes, &materials, &warn, &err, ("../res/" + str).c_str());
     watch.stop();
     float elapsed = watch.milli();
     time_accumulate.push_back(elapsed);
-    log_mesh_profile(str, shapes, res, elapsed);
+    log_mesh_profile(str, meshes, res, elapsed);
   }
   average = 0.f;
   for (auto& t : time_accumulate) {
@@ -101,14 +116,14 @@ int main() {
 
 #ifdef MY_PROFILE
   // my loader
-  std::vector<obj_loader::shape> shape_out;
   for (auto& str : file_list) {
+    obj_loader::scene scene;
     watch.start();
-    bool res = load_obj("../res/" + str, shape_out, obj_loader::parse_option::FLIP_UV);
+    bool res = load_obj("../res/" + str, scene, obj_loader::parse_option::FLIP_UV);
     watch.stop();
     float elapsed = watch.milli();
     time_accumulate.push_back(elapsed);
-    log_mesh_profile(str, shape_out, res, elapsed);
+    log_mesh_profile(str, scene, res, elapsed);
   }
   average = 0.f;
   for (auto& t : time_accumulate) {
@@ -116,7 +131,6 @@ int main() {
   }
   average /= time_accumulate.size();
   std::cout << "average elapsed time (OBJ): " << average << " ms" << '\n';
-  std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 #endif
 
