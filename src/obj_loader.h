@@ -50,7 +50,7 @@ namespace obj_loader {
 
   enum class texture_face_type {
     TEX_2D,
-    TEX_SPHERE,
+    TEX_3D_SPHERE,
     TEX_3D_CUBE_TOP,
     TEX_3D_CUBE_BOTTOM,
     TEX_3D_CUBE_FRONT,
@@ -107,7 +107,7 @@ namespace obj_loader {
   using HashType = typename std::conditional<std::is_enum<Key>::value, enum_class_hash, std::hash<Key>>::type;
 
   template <typename Key, typename T>
-  using my_unordered_map = std::unordered_map<Key, T, HashType<Key>>;
+  using unordered_map = std::unordered_map<Key, T, HashType<Key>>;
 
   struct material {
     material()
@@ -126,7 +126,7 @@ namespace obj_loader {
     float ior; // index of refraction
     float dissolve; // 1 == opaque; 0 == fully transparent
     int illum; // illumination model
-    my_unordered_map<tex_type, texture> texture_map;
+    unordered_map<tex_type, texture> texture_map;
   };
 
   enum class parse_option {
@@ -138,11 +138,11 @@ namespace obj_loader {
     COMBINE_SUBMESHES = 1 << 4 // @TODO
   };
 
-  bool operator&(const parse_option a, const parse_option b) {
+  inline bool operator&(const parse_option a, const parse_option b) {
     return static_cast<parse_option>(static_cast<int>(a) & static_cast<int>(b)) == b;
   }
 
-  parse_option operator|(const parse_option a, const parse_option b) {
+  inline parse_option operator|(const parse_option a, const parse_option b) {
     return static_cast<parse_option>(static_cast<int>(a) | static_cast<int>(b));
   }
 
@@ -282,22 +282,25 @@ namespace obj_loader {
     return f;
   }
 
-  inline void parseReal2(vec2& vt, const char** token) {
-    vt.x = parseReal(token, 0.f);
-    vt.y = parseReal(token, 0.f);
+  inline void parseReal2(vec2& vt, const char** token,
+          float default_x = 0.f, float default_y = 0.f) {
+    vt.x = parseReal(token, default_x);
+    vt.y = parseReal(token, default_y);
   }
 
-  inline void parseReal3(vec3& vn, const char** token) {
-    vn.x = parseReal(token, 0.f);
-    vn.y = parseReal(token, 0.f);
-    vn.z = parseReal(token, 0.f);
+  inline void parseReal3(vec3& vn, const char** token,
+          float default_x = 0.f, float default_y = 0.f, float default_z = 0.f) {
+    vn.x = parseReal(token, default_x);
+    vn.y = parseReal(token, default_y);
+    vn.z = parseReal(token, default_z);
   }
 
-  inline void parseReal4(vec4& v, const char** token) {
-    v.x = parseReal(token, 0.f);
-    v.y = parseReal(token, 0.f);
-    v.z = parseReal(token, 0.f);
-    v.w = parseReal(token, 1.f);
+  inline void parseReal4(vec4& v, const char** token,
+           float default_x = 0.f, float default_y = 0.f, float default_z = 0.f, float default_w = 1.f) {
+    v.x = parseReal(token, default_x);
+    v.y = parseReal(token, default_y);
+    v.z = parseReal(token, default_z);
+    v.w = parseReal(token, default_w);
   }
 
   inline int parseInt(const char **token) {
@@ -393,6 +396,31 @@ namespace obj_loader {
     return ret;
   }
 
+  inline texture_face_type parseTextureOption(const char** token, texture_face_type default_type) {
+    (*token) += strspn((*token), " \t");
+    const char *end = (*token) + strcspn((*token), " \t\r");
+    texture_face_type tft = default_type;
+
+    if ((0 == strncmp((*token), "cube_top", strlen("cube_top")))) {
+      tft = texture_face_type::TEX_3D_CUBE_TOP;
+    } else if ((0 == strncmp((*token), "cube_bottom", strlen("cube_bottom")))) {
+      tft = texture_face_type::TEX_3D_CUBE_BOTTOM;
+    } else if ((0 == strncmp((*token), "cube_left", strlen("cube_left")))) {
+      tft = texture_face_type::TEX_3D_CUBE_LEFT;
+    } else if ((0 == strncmp((*token), "cube_right", strlen("cube_right")))) {
+      tft = texture_face_type::TEX_3D_CUBE_RIGHT;
+    } else if ((0 == strncmp((*token), "cube_front", strlen("cube_front")))) {
+      tft = texture_face_type::TEX_3D_CUBE_FRONT;
+    } else if ((0 == strncmp((*token), "cube_back", strlen("cube_back")))) {
+      tft = texture_face_type::TEX_3D_CUBE_BACK;
+    } else if ((0 == strncmp((*token), "sphere", strlen("sphere")))) {
+      tft = texture_face_type::TEX_3D_SPHERE;
+    }
+
+    (*token) = end;
+    return tft;
+  }
+
   inline bool parseTexture(texture* tex, const char* token) {
     while (!IS_NEW_LINE((*token))) {
       token += strspn(token, " \t");  // skip space
@@ -410,20 +438,28 @@ namespace obj_loader {
         tex->option.bump_multiplier = parseReal(&token, 1.f);
       } else if ((0 == strncmp(token, "-boost", 6)) && IS_SPACE((token[6]))) {
         token += 7;
+        tex->option.sharpness = parseReal(&token, 1.f);
       } else if ((0 == strncmp(token, "-mm", 3)) && IS_SPACE((token[3]))) {
         token += 4;
+        tex->option.brightness = parseReal(&token, 0.f);
+        tex->option.contrast = parseReal(&token, 1.f);
       } else if ((0 == strncmp(token, "-o", 2)) && IS_SPACE((token[2]))) {
         token += 3;
+        parseReal3(tex->option.origin_offset, &token);
       } else if ((0 == strncmp(token, "-s", 2)) && IS_SPACE((token[2]))) {
         token += 3;
+        parseReal3(tex->option.scale, &token, 1.f, 1.f, 1.f);
       } else if ((0 == strncmp(token, "-t", 2)) && IS_SPACE((token[2]))) {
         token += 3;
+        parseReal3(tex->option.turbulence, &token);
       } else if ((0 == strncmp(token, "-imfchan", 8)) && IS_SPACE((token[8]))) {
         token += 9;
+        // @TODO
       } else if ((0 == strncmp(token, "-type", 5)) && IS_SPACE((token[5]))) {
         token += 5;
+        tex->option.face_type = parseTextureOption(&token, texture_face_type::TEX_2D);
       } else {
-        // only texture name without any options
+        // parse texture name at last.
         tex->path = parseString(&token);
         if (tex->path.empty()) {
           return false;
@@ -639,6 +675,8 @@ namespace obj_loader {
     }
 
     // flush last material
+    material_map.insert(std::make_pair(current_mat.name, static_cast<int>(materials.size())));
+    materials.emplace_back(current_mat);
 
     return true;
   }
