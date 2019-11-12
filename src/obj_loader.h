@@ -256,35 +256,22 @@ namespace obj_loader {
     return f;
   }
 
-  inline void parseVT(float* x, float* y, const char** token, parse_option flag,
-               float default_x = 0.f, float default_y = 0.f) {
-    (*x) = parseReal(token, default_x);
-    if (flag & parse_option::FLIP_UV) {
-      (*y) = 1.f - parseReal(token, default_y);
-    } else {
-      (*y) = parseReal(token, default_y);
-    }
+  inline void parseReal2(vec2& vt, const char** token) {
+    vt.x = parseReal(token, 0.f);
+    vt.y = parseReal(token, 0.f);
   }
 
-  inline void parseVN(float* x, float* y, float* z, const char** token,
-               float default_x = 0.f, float default_y = 0.f, float default_z = 0.f) {
-    (*x) = parseReal(token, default_x);
-    (*y) = parseReal(token, default_y);
-    (*z) = parseReal(token, default_z);
+  inline void parseReal3(vec3& vn, const char** token) {
+    vn.x = parseReal(token, 0.f);
+    vn.y = parseReal(token, 0.f);
+    vn.z = parseReal(token, 0.f);
   }
 
-  inline void parseV(float* x, float* y, float* z, float* w, const char** token,
-              float default_x = 0.f, float default_y = 0.f, float default_z = 0.f, float default_w = 1.f) {
-    (*x) = parseReal(token, default_x);
-    (*y) = parseReal(token, default_y);
-    (*z) = parseReal(token, default_z);
-    (*w) = parseReal(token, default_w);
-  }
-
-  inline void parseReal3(float* r, float* g, float* b, const char** token) {
-    (*r) = parseReal(token, 0.f);
-    (*g) = parseReal(token, 0.f);
-    (*b) = parseReal(token, 0.f);
+  inline void parseReal4(vec4& v, const char** token) {
+    v.x = parseReal(token, 0.f);
+    v.y = parseReal(token, 0.f);
+    v.z = parseReal(token, 0.f);
+    v.w = parseReal(token, 1.f);
   }
 
   inline int parseInt(const char **token) {
@@ -374,16 +361,16 @@ namespace obj_loader {
     while(!getline(ifs, line_buf).eof()) {
 
       // Trim trailing whitespace.
-      if (line_buf.size() > 0) {
+      if (!line_buf.empty()) {
         line_buf = line_buf.substr(0, line_buf.find_last_not_of(" \t") + 1);
       }
 
       // Trim newline '\r\n' or '\n'
-      if (line_buf.size() > 0) {
+      if (!line_buf.empty()) {
         if (line_buf[line_buf.size() - 1] == '\n')
           line_buf.erase(line_buf.size() - 1);
       }
-      if (line_buf.size() > 0) {
+      if (!line_buf.empty()) {
         if (line_buf[line_buf.size() - 1] == '\r')
           line_buf.erase(line_buf.size() - 1);
       }
@@ -422,27 +409,27 @@ namespace obj_loader {
       // ambient
       if (token[0] == 'K' && token[1] == 'a' && IS_SPACE((token[2]))) {
         token += 2;
-        float r,g,b;
-        parseReal3(&r, &g, &b, &token);
-        current_mat.ambient = vec3(r, g, b);
+        vec3 ambient;
+        parseReal3(ambient, &token);
+        current_mat.ambient = ambient;
         continue;
       }
 
       // diffuse
       if (token[0] == 'K' && token[1] == 'd' && IS_SPACE((token[2]))) {
         token += 2;
-        float r,g,b;
-        parseReal3(&r, &g, &b, &token);
-        current_mat.diffuse = vec3(r, g, b);
+        vec3 diffuse;
+        parseReal3(diffuse, &token);
+        current_mat.diffuse = diffuse;
         continue;
       }
 
       // specular
       if (token[0] == 'K' && token[1] == 's' && IS_SPACE((token[2]))) {
         token += 2;
-        float r,g,b;
-        parseReal3(&r, &g, &b, &token);
-        current_mat.specular = vec3(r, g, b);
+        vec3 specular;
+        parseReal3(specular, &token);
+        current_mat.specular = specular;
         continue;
       }
 
@@ -450,9 +437,9 @@ namespace obj_loader {
       if ((token[0] == 'K' && token[1] == 't' && IS_SPACE((token[2]))) ||
           (token[0] == 'T' && token[1] == 'f' && IS_SPACE((token[2])))) {
         token += 2;
-        float r,g,b;
-        parseReal3(&r, &g, &b, &token);
-        current_mat.transmittance = vec3(r, g, b);
+        vec3 transmittance;
+        parseReal3(transmittance, &token);
+        current_mat.transmittance = transmittance;
         continue;
       }
 
@@ -466,9 +453,9 @@ namespace obj_loader {
       // emission
       if (token[0] == 'K' && token[1] == 'e' && IS_SPACE(token[2])) {
         token += 2;
-        float r,g,b;
-        parseReal3(&r, &g, &b, &token);
-        current_mat.emission = vec3(r, g, b);
+        vec3 emission;
+        parseReal3(emission, &token);
+        current_mat.emission = emission;
         continue;
       }
 
@@ -589,11 +576,11 @@ namespace obj_loader {
     while(!getline(ifs, line_buf).eof()) {
 
       // Trim newline '\r\n' or '\n'
-      if (line_buf.size() > 0) {
+      if (!line_buf.empty()) {
         if (line_buf[line_buf.size() - 1] == '\n')
           line_buf.erase(line_buf.size() - 1);
       }
-      if (line_buf.size() > 0) {
+      if (!line_buf.empty()) {
         if (line_buf[line_buf.size() - 1] == '\r')
           line_buf.erase(line_buf.size() - 1);
       }
@@ -614,27 +601,30 @@ namespace obj_loader {
       // vertex
       if (token[0] == 'v' && IS_SPACE((token[1]))) {
         token += 2;
-        float x,y,z,w;
-        parseV(&x, &y, &z, &w, &token);
-        vertices.emplace_back(x,y,z,w);
+        vec4 v;
+        parseReal4(v, &token);
+        vertices.emplace_back(v);
         continue;
       }
 
       // normal
       if (token[0] == 'v' && token[1] == 'n' && IS_SPACE((token[2]))) {
         token += 3;
-        float x,y,z;
-        parseVN(&x, &y, &z, &token);
-        normals.emplace_back(x,y,z);
+        vec3 vn;
+        parseReal3(vn, &token);
+        normals.emplace_back(vn);
         continue;
       }
 
       // texcoord
       if (token[0] == 'v' && token[1] == 't' && IS_SPACE((token[2]))) {
         token += 3;
-        float x,y;
-        parseVT(&x, &y, &token, parseOption);
-        texcoords.emplace_back(x,y);
+        vec2 vt;
+        parseReal2(vt, &token);
+        if (parseOption & parse_option::FLIP_UV) {
+          vt.y = 1.f - vt.y;
+        }
+        texcoords.emplace_back(vt);
         continue;
       }
 
