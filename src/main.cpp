@@ -47,7 +47,7 @@ void log_mesh_profile(const std::string& name, objl::Loader& loader, bool res, f
 #endif
 
 #ifdef MY_PROFILE
-void log_mesh_profile(const std::string& name, const obj_loader::scene& scene, bool res, float elapsed) {
+void log_mesh_profile(const std::string& name, const obj_loader::Scene& scene, bool res, float elapsed) {
   std::cout << "mesh count (" << name << "): " << scene.meshes.size() << '\n';
   std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
   std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
@@ -117,9 +117,9 @@ int main() {
 #ifdef MY_PROFILE
   // my loader
   for (auto& str : file_list) {
-    obj_loader::scene scene;
+    obj_loader::Scene scene;
     watch.start();
-    bool res = load_obj("../res/" + str, scene, obj_loader::parse_option::FLIP_UV);
+    bool res = loadObj("../res/" + str, scene, obj_loader::ParseOption::FLIP_UV);
     watch.stop();
     float elapsed = watch.milli();
     time_accumulate.push_back(elapsed);
