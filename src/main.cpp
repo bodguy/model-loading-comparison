@@ -35,12 +35,9 @@ namespace std {
 
 #ifdef ASSIMP_PROFILE
 void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh, bool res, float elapsed) {
-  std::cout << "total mesh count (" << name << "): " << mesh.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
-  for (auto m : mesh) {
-    delete m;
-    m = nullptr;
-  }
-  mesh.clear();
+  std::cout << "mesh count (" << name << "): " << mesh.size() << '\n';
+  std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
+  std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
 }
 #endif
 
@@ -62,7 +59,7 @@ void log_mesh_profile(const std::string& name, const obj_loader::Scene& scene, b
   std::cout << "mesh count (" << name << "): " << scene.meshes.size() << '\n';
   std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
   std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
-  std::cout << "==================================================" << '\n';
+
 }
 #endif
 
@@ -71,7 +68,9 @@ int main() {
 //    "nanosuit/nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
 //    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj"
 //  };
-  std::vector<std::string> file_list = { "cube.obj" };
+  std::vector<std::string> file_list = {
+          "nanosuit/nanosuit.obj"
+  };
   std::vector<float> time_accumulate;
   StopWatch watch;
   float average = 0.f;
@@ -92,7 +91,6 @@ int main() {
   }
   average /= time_accumulate.size();
   std::cout << "average elapsed time (ASSIMP): " << average << " ms" << '\n';
-  std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 #endif
 

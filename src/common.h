@@ -11,17 +11,27 @@ struct vec4 {
   float x, y, z, w;
 };
 
+float flt_epsilon = std::numeric_limits<float>::epsilon();
+bool float_comapre(float a, float b) {
+  return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * flt_epsilon);
+}
 struct vec3 {
   vec3() :x(0), y(0), z(0) {}
   vec3(float f) :x(f), y(f), z(f) {}
   vec3(float tx, float ty,  float tz) { x = tx; y = ty; z = tz; }
   float x, y, z;
+  bool operator == (const vec3& rhs) {
+    return (float_comapre(this->x, rhs.x) && float_comapre(this->y, rhs.y) && float_comapre(this->z, rhs.z));
+  }
 };
 
 struct vec2 {
   vec2() :x(0), y(0) {}
   vec2(float tx, float ty) { x = tx; y = ty; }
   float x, y;
+  bool operator == (const vec2& rhs) {
+    return (float_comapre(this->x, rhs.x) && float_comapre(this->y, rhs.y));
+  }
 };
 
 struct vertex {
