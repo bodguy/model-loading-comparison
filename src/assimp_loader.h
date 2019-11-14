@@ -35,6 +35,7 @@ void process_node(aiNode* node, const aiScene* scene, std::vector<mesh*>& meshes
 
 mesh* process_mesh(aiMesh* ai_mesh, const aiScene* scene) {
   mesh* new_mesh = new mesh();
+  new_mesh->name = std::string(ai_mesh->mName.C_Str());
 
   // process vertex
   new_mesh->vertices.reserve(ai_mesh->mNumVertices);

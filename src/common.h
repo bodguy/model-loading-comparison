@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <chrono>
+#include <cmath>
 
 struct vec4 {
   vec4() :x(0), y(0), z(0), w(0) {}
@@ -13,7 +14,7 @@ struct vec4 {
 
 float flt_epsilon = std::numeric_limits<float>::epsilon();
 bool float_comapre(float a, float b) {
-  return fabs(a - b) <= ( (fabs(a) < fabs(b) ? fabs(b) : fabs(a)) * flt_epsilon);
+  return std::fabs(a - b) <= ( (std::fabs(a) < std::fabs(b) ? std::fabs(b) : std::fabs(a)) * flt_epsilon);
 }
 struct vec3 {
   vec3() :x(0), y(0), z(0) {}
@@ -46,6 +47,7 @@ struct texture {
 };
 
 struct mesh {
+    std::string name;
     std::vector<vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<texture> textures;

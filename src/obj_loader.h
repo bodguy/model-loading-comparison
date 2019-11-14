@@ -189,7 +189,7 @@ namespace obj_loader {
           vtx.texcoord = (idx.vt_idx == -1 ? vec2() : texcoords[idx.vt_idx]);
           vtx.normal = (idx.vn_idx == -1 ? vec3() : normals[idx.vn_idx]);
           mesh.vertex.emplace_back(vtx);
-          mesh.indices.emplace_back(incremental_indices);
+          mesh.indices.emplace_back(incremental_indices); // @TODO
           incremental_indices++;
         }
         mesh.material_id = material_id;
@@ -889,9 +889,6 @@ namespace obj_loader {
         // reset
         current_prim = Primitive();
         current_mesh = Mesh();
-        vertices.clear();
-        texcoords.clear();
-        normals.clear();
 
         token += 2;
 
@@ -925,9 +922,6 @@ namespace obj_loader {
         // reset
         current_prim = Primitive();
         current_mesh = Mesh();
-        vertices.clear();
-        texcoords.clear();
-        normals.clear();
 
         token += 2;
         current_object_name = parseString(&token);
