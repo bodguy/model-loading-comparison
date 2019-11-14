@@ -17,6 +17,15 @@
 #define IS_NEW_LINE(x) (((x) == '\r') || ((x) == '\n') || ((x) == '\0'))
 
 namespace obj_loader {
+  struct Vertex {
+    Vertex() :position(), texcoord(), normal() {}
+    vec4 position;
+    vec2 texcoord;
+    vec3 normal;
+//    vec3 Tangent;
+//    vec3 Bitangent;
+  };
+
   struct VertexIndex {
     VertexIndex() : v_idx(-1), vt_idx(-1), vn_idx(-1) {}
     explicit VertexIndex(int idx) : v_idx(idx), vt_idx(idx), vn_idx(idx) {}
@@ -36,11 +45,10 @@ namespace obj_loader {
   };
 
   struct Mesh {
-    Mesh() : name(), indices(), num_face_vertices(), material_ids() { indices.clear(); num_face_vertices.clear(); material_ids.clear(); }
+    Mesh() : name(), vertex(), material_id(-1) { vertex.clear(); }
     std::string name;
-    std::vector<VertexIndex> indices;
-    std::vector<unsigned char> num_face_vertices; // 3: tri, 4: quad etc... Up to 255 vertices per face
-    std::vector<int> material_ids; // per face material IDs
+    std::vector<Vertex> vertex;
+    int material_id;
   };
 
   enum class TextureFace {
@@ -138,20 +146,13 @@ namespace obj_loader {
   }
 
   struct Scene {
-    Scene() : vertices(), texcoords(), normals(), meshes(), material_map(), materials(), base_dir() {
-      vertices.clear();
-      texcoords.clear();
-      normals.clear();
+    Scene() : meshes(), materials(), base_dir() {
       meshes.clear();
-      material_map.clear();
       materials.clear();
     }
-    std::vector<vec4> vertices;
-    std::vector<vec2> texcoords;
-    std::vector<vec3> normals;
     std::vector<Mesh> meshes;
-    std::unordered_map<std::string, int> material_map;
     std::vector<Material> materials;
+    std::vector<unsigned int> indices; // @TODO
     std::string base_dir;
   };
 
@@ -364,7 +365,9 @@ namespace obj_loader {
 //    }
   }
 
-  inline bool parsePrimitive(Mesh& mesh, const Primitive& primitive, ParseOption option, const int material_id, const std::vector<vec4>& verts, const std::string& name, const std::string& default_name) {
+  inline bool parsePrimitive(Mesh& mesh, const Primitive& primitive, ParseOption option, const int material_id,
+          const std::vector<vec4>& verts, const std::vector<vec2>& texcoords, const std::vector<vec3>& normals,
+         const std::string& name, const std::string& default_name) {
     if (primitive.is_empty()) {
       return false;
     }
@@ -379,14 +382,19 @@ namespace obj_loader {
         continue;
       }
 
+      // triangulate only parsing flag is set and polygon has more than 3.
       if ((option & ParseOption::TRIANGULATE) && npolys != 3) {
         triangulate(mesh, verts, npolys);
       } else {
-        for (size_t k = 0; k < npolys; k++) {
-          mesh.indices.emplace_back(face.vertex_indices[k]);
+        for (size_t f = 0; f < npolys; f++) {
+          Vertex vtx;
+          VertexIndex idx = face.vertex_indices[f];
+          vtx.position = verts[idx.v_idx];
+          vtx.texcoord = texcoords[idx.vt_idx];
+          vtx.normal = normals[idx.vn_idx];
+          mesh.vertex.emplace_back(vtx);
         }
-        mesh.num_face_vertices.emplace_back(static_cast<unsigned char>(npolys));
-        mesh.material_ids.emplace_back(material_id);
+        mesh.material_id = material_id;
       }
     }
 
@@ -688,7 +696,9 @@ namespace obj_loader {
     bool has_d = false;
     std::string line_buf;
 
-    while(!getLine(ifs, line_buf).eof()) {
+    // preventing a empty file
+    while(ifs.peek() != -1) {
+      getLine(ifs, line_buf);
 
       // Trim trailing whitespace.
       if (!line_buf.empty()) {
@@ -931,6 +941,7 @@ namespace obj_loader {
   }
 
   // NOTE: Geometry entities other than "facets" (including "points", "lines", "curves", etc.) and smooth group are not supported.
+  // make sure to check loadObj function return value is true or not.
   bool loadObj(const std::string& path, Scene& scene, ParseOption parse_option) {
     if (!endsWith(path, ".obj")) {
       return false;
@@ -941,16 +952,22 @@ namespace obj_loader {
       return false;
     }
 
+    std::vector<vec4> vertices;
+    std::vector<vec2> texcoords;
+    std::vector<vec3> normals;
+    std::unordered_map<std::string, int> material_map;
     Primitive current_prim;
     std::string current_object_name;
     Mesh current_mesh;
-    int max_vindex = -1, max_vtindex = -1, max_vnindex = -1, current_material_id = -1;
+    int current_material_id = -1;
     std::pair<std::string, std::string> pair = splitDelims(path, "\\/");
     scene.base_dir = pair.first;
     std::string filename = pair.second;
     std::string line_buf;
 
-    while(!getLine(ifs, line_buf).eof()) {
+    // preventing a empty file
+    while(ifs.peek() != -1) {
+      getLine(ifs, line_buf);
 
       // Trim newline '\r\n' or '\n'
       if (!line_buf.empty()) {
@@ -980,7 +997,7 @@ namespace obj_loader {
         token += 2;
         vec4 v;
         parseReal4(v, &token);
-        scene.vertices.emplace_back(v);
+        vertices.emplace_back(v);
         continue;
       }
 
@@ -989,7 +1006,7 @@ namespace obj_loader {
         token += 3;
         vec3 vn;
         parseReal3(vn, &token);
-        scene.normals.emplace_back(vn);
+        normals.emplace_back(vn);
         continue;
       }
 
@@ -1001,7 +1018,7 @@ namespace obj_loader {
         if (parse_option & ParseOption::FLIP_UV) {
           vt.y = 1.f - vt.y;
         }
-        scene.texcoords.emplace_back(vt);
+        texcoords.emplace_back(vt);
         continue;
       }
 
@@ -1015,13 +1032,9 @@ namespace obj_loader {
 
         while (!IS_NEW_LINE(token[0])) {
           VertexIndex vi;
-          if (!parseIndices(&token, scene.vertices.size(), scene.normals.size(), scene.texcoords.size(), &vi)) {
+          if (!parseIndices(&token, vertices.size(), normals.size(), texcoords.size(), &vi)) {
             return false;
           }
-          // profile max v,vt,vn index
-          max_vindex = std::max<int>(max_vindex, vi.v_idx);
-          max_vtindex = std::max<int>(max_vtindex, vi.vt_idx);
-          max_vnindex = std::max<int>(max_vnindex, vi.vn_idx);
 
           // finish parse indices
           f.vertex_indices.emplace_back(vi);
@@ -1038,13 +1051,13 @@ namespace obj_loader {
         std::string new_material_name = parseString(&token);
         int new_material_id = -1;
         // found
-        if (scene.material_map.find(new_material_name) != scene.material_map.end()) {
-          new_material_id = scene.material_map[new_material_name];
+        if (material_map.find(new_material_name) != material_map.end()) {
+          new_material_id = material_map[new_material_name];
         }
         // check current material and previous
         if (new_material_id != current_material_id) {
           // just make group and don't push it to meshes
-          parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, scene.vertices, current_object_name, filename); // return value not used
+          parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
           // clear current primitives face groups
           current_prim.faces.clear();
           // cache new material id
@@ -1061,7 +1074,7 @@ namespace obj_loader {
         split(mtl_file_names, " ", &token);
         // load just one available mtl file in the list
         for (std::string& name : mtl_file_names) {
-          if (parseMtl(scene.base_dir + name, scene.materials, scene.material_map)) {
+          if (parseMtl(scene.base_dir + name, scene.materials, material_map)) {
             break;
           }
         }
@@ -1070,14 +1083,17 @@ namespace obj_loader {
 
       // group name
       if (token[0] == 'g' && IS_SPACE((token[1]))) {
-        parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, scene.vertices, current_object_name, filename); // return value not used
-        if (!current_mesh.indices.empty()) {
+        parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
+        if (!current_mesh.vertex.empty()) {
           scene.meshes.emplace_back(current_mesh);
         }
 
         // reset
         current_prim = Primitive();
         current_mesh = Mesh();
+        vertices.clear();
+        texcoords.clear();
+        normals.clear();
 
         token += 2;
 
@@ -1103,14 +1119,17 @@ namespace obj_loader {
 
       // object name
       if (token[0] == 'o' && IS_SPACE((token[1]))) {
-        parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, scene.vertices, current_object_name, filename); // return value not used
-        if (!current_mesh.indices.empty()) {
+        parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
+        if (!current_mesh.vertex.empty()) {
           scene.meshes.emplace_back(current_mesh);
         }
 
         // reset
         current_prim = Primitive();
         current_mesh = Mesh();
+        vertices.clear();
+        texcoords.clear();
+        normals.clear();
 
         token += 2;
         current_object_name = parseString(&token);
@@ -1118,19 +1137,8 @@ namespace obj_loader {
       }
     }
 
-    // check max v,vt,vn is lesser than vertices, texcoords, normals size
-    if (max_vindex >= static_cast<int>(scene.vertices.size())) {
-      return false;
-    }
-    if (max_vtindex >= static_cast<int>(scene.texcoords.size())) {
-      return false;
-    }
-    if (max_vnindex >= static_cast<int>(scene.normals.size())) {
-      return false;
-    }
-
-    bool ret = parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, scene.vertices, current_object_name, filename);
-    if (ret || !current_mesh.indices.empty()) {
+    bool ret = parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename);
+    if (ret || !current_mesh.vertex.empty()) {
       scene.meshes.emplace_back(current_mesh);
     }
 

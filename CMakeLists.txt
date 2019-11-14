@@ -12,7 +12,7 @@ endif(NOT assimp_FOUND)
 set(THIRD_PARTY_DIR "third_party/")
 
 file(GLOB_RECURSE SOURCE_FILES src/*.cpp src/*.h)
-add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES})
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES} src/obj_mesh_creator.h)
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${THIRD_PARTY_DIR})
 
 if(assimp_FOUND)
