@@ -35,15 +35,17 @@ namespace std {
 }
 
 #ifdef ASSIMP_PROFILE
-void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh, bool res, float elapsed) {
+void log_mesh_profile(const std::string& name, std::vector<mesh*>& mesh, bool res, float elapsed, bool verbos) {
   std::cout << "mesh count (" << name << "): " << mesh.size() << '\n';
-  for (auto m : mesh) {
-    printf("mesh name: %s\n", m->name.c_str());
-    printf("verts size: %d\n", m->vertices.size());
-    printf("indices size: %d\n", m->indices.size());
+  if (verbos) {
+    for (auto m : mesh) {
+      printf("mesh name: %s\n", m->name.c_str());
+      printf("verts size: %d\n", m->vertices.size());
+      printf("indices size: %d\n", m->indices.size());
+    }
   }
-//  std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
-//  std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
+  std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
+  std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
 }
 #endif
 
@@ -84,9 +86,9 @@ void log_mesh_profile(const std::string& name, const obj_loader::Scene& scene, b
 
 int main() {
   std::vector<std::string> file_list = {
-          "Five_Wheeler.obj"
+      "Five_Wheeler.obj"
 //    "nanosuit/nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
-//    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj"
+//    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj", "panda/PandaMale.obj"
   };
   std::vector<float> time_accumulate;
   StopWatch watch;
@@ -101,7 +103,7 @@ int main() {
     watch.stop();
     float elapsed = watch.milli();
     time_accumulate.push_back(elapsed);
-    log_mesh_profile(str, mesh_assimp, res, elapsed);
+    log_mesh_profile(str, mesh_assimp, res, elapsed, false);
   }
   for (auto& t : time_accumulate) {
     average += t;

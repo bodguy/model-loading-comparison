@@ -848,16 +848,26 @@ namespace obj_loader {
         token += 7;
         std::string new_material_name = parseString(&token);
         int new_material_id = -1;
-        // found
+        // check exist
         if (material_map.find(new_material_name) != material_map.end()) {
           new_material_id = material_map[new_material_name];
         }
+
         // check current material and previous
-        if (new_material_id != current_material_id) {
-          // just make group and push it to meshes
+        if (new_material_id != current_material_id) { // @TODO
+          // when current object name is empty, then assign current material name as alternatives.
+          if (current_object_name.empty()) {
+            current_object_name = new_material_name;
+          }
           parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
-          // clear current primitives face groups
+          if (!current_mesh.vertex.empty()) {
+            scene.meshes.emplace_back(current_mesh);
+            // when successfully push a new mesh, then cache current material name.
+            current_object_name = new_material_name;
+          }
+          // reset
           current_prim = Primitive();
+          current_mesh = Mesh();
           // cache new material id
           current_material_id = new_material_id;
         }
@@ -884,6 +894,7 @@ namespace obj_loader {
         parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
         if (!current_mesh.vertex.empty()) {
           scene.meshes.emplace_back(current_mesh);
+          current_object_name = "";
         }
 
         // reset
@@ -917,6 +928,7 @@ namespace obj_loader {
         parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
         if (!current_mesh.vertex.empty()) {
           scene.meshes.emplace_back(current_mesh);
+          current_object_name = "";
         }
 
         // reset
