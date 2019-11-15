@@ -316,14 +316,6 @@ namespace obj_loader {
     vn.z = parseReal(token, default_z);
   }
 
-  inline void parseReal4(vec4& v, const char** token,
-           float default_x = 0.f, float default_y = 0.f, float default_z = 0.f, float default_w = 1.f) {
-    v.x = parseReal(token, default_x);
-    v.y = parseReal(token, default_y);
-    v.z = parseReal(token, default_z);
-    v.w = parseReal(token, default_w);
-  }
-
   inline int parseInt(const char **token) {
     (*token) += strspn((*token), " \t");
     int i = atoi((*token));

@@ -6,6 +6,14 @@
 #include <chrono>
 #include <cmath>
 
+namespace std {
+  template <typename _CharT, typename _Traits>
+  inline basic_ostream<_CharT, _Traits> &
+  tab(basic_ostream<_CharT, _Traits> &__os) {
+    return __os.put(__os.widen('\t'));
+  }
+}
+
 struct vec4 {
   vec4() :x(0), y(0), z(0), w(0) {}
   vec4(float tx, float ty, float tz, float tw) { x = tx; y = ty; z = tz; w = tw; }
@@ -77,6 +85,33 @@ public:
 private:
     std::chrono::time_point<std::chrono::high_resolution_clock> s;
     std::chrono::time_point<std::chrono::high_resolution_clock> e;
+};
+
+class Profiler {
+public:
+  Profiler() : time_accumulate(), stopWatch() { time_accumulate.clear(); }
+
+  void Start() { stopWatch.start(); }
+  float Stop() {
+    stopWatch.stop();
+    float elapsed = stopWatch.milli();
+    time_accumulate.push_back(elapsed);
+    return elapsed;
+  }
+  void Reset() { time_accumulate.clear(); }
+  float Average() {
+    float average = 0.f;
+    for (auto& t : time_accumulate) {
+      average += t;
+    }
+    average /= time_accumulate.size();
+    Reset();
+    return average;
+  }
+
+private:
+  std::vector<float> time_accumulate;
+  StopWatch stopWatch;
 };
 
 #endif //MODEL_LOAD_COMMON_H
