@@ -86,7 +86,7 @@ void log_mesh_profile(const std::string& name, const obj_loader::Scene& scene, b
 
 int main() {
   std::vector<std::string> file_list = {
-      "Five_Wheeler.obj"
+      "cube/cube.obj"
 //    "nanosuit/nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
 //    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj", "panda/PandaMale.obj"
   };
@@ -103,7 +103,7 @@ int main() {
     watch.stop();
     float elapsed = watch.milli();
     time_accumulate.push_back(elapsed);
-    log_mesh_profile(str, mesh_assimp, res, elapsed, false);
+    log_mesh_profile(str, mesh_assimp, res, elapsed, true);
   }
   for (auto& t : time_accumulate) {
     average += t;
@@ -148,7 +148,7 @@ int main() {
     watch.stop();
     float elapsed = watch.milli();
     time_accumulate.push_back(elapsed);
-    log_mesh_profile(str, scene, res, elapsed, false);
+    log_mesh_profile(str, scene, res, elapsed, true);
   }
   average = 0.f;
   for (auto& t : time_accumulate) {

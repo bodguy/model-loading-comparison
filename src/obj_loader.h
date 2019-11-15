@@ -756,6 +756,7 @@ namespace obj_loader {
     std::unordered_map<std::string, int> material_map;
     Primitive current_prim;
     std::string current_object_name;
+    std::string current_material_name;
     Mesh current_mesh;
     int current_material_id = -1;
     std::pair<std::string, std::string> pair = splitDelims(path, "\\/");
@@ -848,13 +849,13 @@ namespace obj_loader {
         token += 7;
         std::string new_material_name = parseString(&token);
         int new_material_id = -1;
-        // check exist
+        // find material id
         if (material_map.find(new_material_name) != material_map.end()) {
           new_material_id = material_map[new_material_name];
         }
 
         // check current material and previous
-        if (new_material_id != current_material_id) { // @TODO
+        if (new_material_name != current_material_name) {
           // when current object name is empty, then assign current material name as alternatives.
           if (current_object_name.empty()) {
             current_object_name = new_material_name;
@@ -870,6 +871,7 @@ namespace obj_loader {
           current_mesh = Mesh();
           // cache new material id
           current_material_id = new_material_id;
+          current_material_name = new_material_name;
         }
         continue;
       }
