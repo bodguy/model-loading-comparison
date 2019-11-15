@@ -20,10 +20,12 @@ struct vec4 {
   float x, y, z, w;
 };
 
+// https://stackoverflow.com/questions/17333/what-is-the-most-effective-way-for-float-and-double-comparison
 float flt_epsilon = std::numeric_limits<float>::epsilon();
 bool float_comapre(float a, float b) {
   return std::fabs(a - b) <= ( (std::fabs(a) < std::fabs(b) ? std::fabs(b) : std::fabs(a)) * flt_epsilon);
 }
+
 struct vec3 {
   vec3() :x(0), y(0), z(0) {}
   vec3(float f) :x(f), y(f), z(f) {}

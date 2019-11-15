@@ -45,9 +45,9 @@ namespace obj_loader {
   };
 
   struct Mesh {
-    Mesh() : name(), vertex(), material_id(-1) { vertex.clear(); }
+    Mesh() : name(), vertices(), material_id(-1) { vertices.clear(); }
     std::string name;
-    std::vector<Vertex> vertex;
+    std::vector<Vertex> vertices;
     std::vector<unsigned int> indices;
     int material_id;
   };
@@ -169,7 +169,6 @@ namespace obj_loader {
     mesh.name = name.empty() ? default_name : name;
 
     // make polygon
-    int incremental_indices = 0;
     for (const Face& face : primitive.faces) {
       size_t npolys = face.vertex_indices.size();
 
@@ -188,9 +187,11 @@ namespace obj_loader {
           vtx.position = verts[idx.v_idx];
           vtx.texcoord = (idx.vt_idx == -1 ? vec2() : texcoords[idx.vt_idx]);
           vtx.normal = (idx.vn_idx == -1 ? vec3() : normals[idx.vn_idx]);
-          mesh.vertex.emplace_back(vtx);
-          mesh.indices.emplace_back(incremental_indices); // @TODO
-          incremental_indices++;
+          mesh.vertices.emplace_back(vtx);
+        }
+        auto preCompute = (unsigned int)((mesh.vertices.size()) - npolys);
+        for (size_t ff = 0; ff < npolys; ff++) {
+          mesh.indices.emplace_back(preCompute + ff);
         }
         mesh.material_id = material_id;
       }
@@ -853,7 +854,7 @@ namespace obj_loader {
             current_object_name = new_material_name;
           }
           parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
-          if (!current_mesh.vertex.empty()) {
+          if (!current_mesh.vertices.empty()) {
             scene.meshes.emplace_back(current_mesh);
             // when successfully push a new mesh, then cache current material name.
             current_object_name = new_material_name;
@@ -886,7 +887,7 @@ namespace obj_loader {
       // group name
       if (token[0] == 'g' && IS_SPACE((token[1]))) {
         parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
-        if (!current_mesh.vertex.empty()) {
+        if (!current_mesh.vertices.empty()) {
           scene.meshes.emplace_back(current_mesh);
           current_object_name = "";
         }
@@ -920,7 +921,7 @@ namespace obj_loader {
       // object name
       if (token[0] == 'o' && IS_SPACE((token[1]))) {
         parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
-        if (!current_mesh.vertex.empty()) {
+        if (!current_mesh.vertices.empty()) {
           scene.meshes.emplace_back(current_mesh);
           current_object_name = "";
         }
@@ -936,7 +937,7 @@ namespace obj_loader {
     }
 
     bool ret = parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename);
-    if (ret || !current_mesh.vertex.empty()) {
+    if (ret || !current_mesh.vertices.empty()) {
       scene.meshes.emplace_back(current_mesh);
     }
 
