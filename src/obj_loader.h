@@ -854,7 +854,7 @@ namespace obj_loader {
         }
         // check current material and previous
         if (new_material_id != current_material_id) {
-          // just make group and don't push it to meshes
+          // just make group and push it to meshes
           parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
           // clear current primitives face groups
           current_prim = Primitive();

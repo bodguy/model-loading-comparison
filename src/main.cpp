@@ -1,4 +1,5 @@
 #include <iostream>
+#include "common.h"
 #include "conditional.h"
 #ifdef ASSIMP_PROFILE
 #include "assimp_loader.h"
@@ -55,27 +56,37 @@ void log_mesh_profile(const std::string& name, std::vector<tinyobj::shape_t>& sh
 
 #ifdef OBJL_PROFILE
 void log_mesh_profile(const std::string& name, objl::Loader& loader, bool res, float elapsed) {
-  std::cout << "total mesh count (" << name << "): " << loader.LoadedMeshes.size() << " (" << std::boolalpha << res << "), " << elapsed << "ms" << '\n';
-}
-#endif
-
-#ifdef MY_PROFILE
-void log_mesh_profile(const std::string& name, const obj_loader::Scene& scene, bool res, float elapsed) {
-  std::cout << "mesh count (" << name << "): " << scene.meshes.size() << '\n';
-  for (auto m : scene.meshes) {
-    printf("mesh name: %s\n", m.name.c_str());
-    printf("verts size: %d\n", m.vertex.size());
-    printf("indices size: %d\n", m.indices.size());
+  std::cout << "mesh count (" << name << "): " << loader.LoadedMeshes.size() << '\n';
+  for (auto m : loader.LoadedMeshes) {
+    printf("mesh name: %s\n", m.MeshName.c_str());
+    printf("verts size: %d\n", m.Vertices.size());
+    printf("indices size: %d\n", m.Indices.size());
   }
 //  std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
 //  std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
 }
 #endif
 
+#ifdef MY_PROFILE
+void log_mesh_profile(const std::string& name, const obj_loader::Scene& scene, bool res, float elapsed, bool verbos) {
+  std::cout << "mesh count (" << name << "): " << scene.meshes.size() << '\n';
+  if (verbos) {
+    for (auto m : scene.meshes) {
+      printf("mesh name: %s\n", m.name.c_str());
+      printf("verts size: %d\n", m.vertex.size());
+      printf("indices size: %d\n", m.indices.size());
+    }
+  }
+  std::cout << std::tab << "result: " << std::boolalpha << res << '\n';
+  std::cout << std::tab << "time: " << elapsed << "ms" << '\n';
+}
+#endif
+
 int main() {
   std::vector<std::string> file_list = {
-    "nanosuit/nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
-    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj"
+          "Five_Wheeler.obj"
+//    "nanosuit/nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
+//    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj"
   };
   std::vector<float> time_accumulate;
   StopWatch watch;
@@ -135,7 +146,7 @@ int main() {
     watch.stop();
     float elapsed = watch.milli();
     time_accumulate.push_back(elapsed);
-    log_mesh_profile(str, scene, res, elapsed);
+    log_mesh_profile(str, scene, res, elapsed, false);
   }
   average = 0.f;
   for (auto& t : time_accumulate) {
@@ -163,7 +174,6 @@ int main() {
   }
   average /= time_accumulate.size();
   std::cout << "average elapsed time (OBJL): " << average << " ms" << '\n';
-  std::cout << "===========================================" << '\n';
   time_accumulate.clear();
 #endif
 
