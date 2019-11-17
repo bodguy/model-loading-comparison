@@ -1,7 +1,7 @@
 ### model-load
 
-using assimp, various model load examples.
-skeleton animation with bone matrix, vertex weight in COLLADA (.DAE) 3d format.
+brief comparison various model loader libraries.
+using assimp and various model load libs.
 
 ### dependencies
 

@@ -78,7 +78,7 @@ int main() {
 //    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj", "panda/PandaMale.obj"
   };
   Profiler profiler;
-  bool verbos = true;
+  bool verbos = false;
 
 #ifdef ASSIMP_PROFILE
   // assimp
