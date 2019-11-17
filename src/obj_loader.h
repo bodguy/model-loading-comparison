@@ -13,10 +13,15 @@
 #include <type_traits>
 #include "common.h"
 
-#define IS_SPACE(x) (((x) == ' ') || ((x) == '\t'))
-#define IS_NEW_LINE(x) (((x) == '\r') || ((x) == '\n') || ((x) == '\0'))
-
 namespace obj_loader {
+  constexpr bool is_space(char x) {
+    return x == ' ' || x == '\t';
+  }
+
+  constexpr bool is_new_line(char x) {
+    return x == '\r' || x == '\n' || x == '\0';
+  }
+
   struct Vertex {
     Vertex() :position(), texcoord(), normal() {}
     vec3 position;
@@ -38,8 +43,8 @@ namespace obj_loader {
     std::vector<VertexIndex> vertex_indices;
   };
 
-  struct Primitive {
-    Primitive() : faces() { faces.clear(); }
+  struct PrimitiveGroup {
+    PrimitiveGroup() : faces() { faces.clear(); }
     bool is_empty() const { return faces.empty(); }
     std::vector<Face> faces;
   };
@@ -160,9 +165,9 @@ namespace obj_loader {
     // @TODO
   }
 
-  inline bool parsePrimitive(Mesh& mesh, const Primitive& primitive, ParseOption option, const int material_id,
-          const std::vector<vec3>& verts, const std::vector<vec2>& texcoords, const std::vector<vec3>& normals,
-         const std::string& name, const std::string& default_name) {
+  inline bool parsePrimitive(Mesh& mesh, const PrimitiveGroup& primitive, ParseOption option, const int material_id,
+                             const std::vector<vec3>& verts, const std::vector<vec2>& texcoords, const std::vector<vec3>& normals,
+                             const std::string& name, const std::string& default_name) {
     if (primitive.is_empty()) {
       return false;
     }
@@ -428,37 +433,37 @@ namespace obj_loader {
   }
 
   inline bool parseTexture(Texture& tex, const char* token) {
-    while (!IS_NEW_LINE((*token))) {
+    while (!is_new_line((*token))) {
       token += strspn(token, " \t");  // skip space
-      if ((0 == strncmp(token, "-clamp", 6)) && IS_SPACE((token[6]))) {
+      if ((0 == strncmp(token, "-clamp", 6)) && is_space((token[6]))) {
         token += 7;
         tex.option.clamp = parseOnOff(&token, true);
-      } else if ((0 == strncmp(token, "-blendu", 7)) && IS_SPACE((token[7]))) {
+      } else if ((0 == strncmp(token, "-blendu", 7)) && is_space((token[7]))) {
         token += 8;
         tex.option.blendu = parseOnOff(&token, true);
-      } else if ((0 == strncmp(token, "-blendv", 7)) && IS_SPACE((token[7]))) {
+      } else if ((0 == strncmp(token, "-blendv", 7)) && is_space((token[7]))) {
         token += 8;
         tex.option.blendv = parseOnOff(&token, true);
-      } else if ((0 == strncmp(token, "-bm", 3)) && IS_SPACE((token[3]))) {
+      } else if ((0 == strncmp(token, "-bm", 3)) && is_space((token[3]))) {
         token += 4;
         tex.option.bump_multiplier = parseReal(&token, 1.f);
-      } else if ((0 == strncmp(token, "-boost", 6)) && IS_SPACE((token[6]))) {
+      } else if ((0 == strncmp(token, "-boost", 6)) && is_space((token[6]))) {
         token += 7;
         tex.option.sharpness = parseReal(&token, 1.f);
-      } else if ((0 == strncmp(token, "-mm", 3)) && IS_SPACE((token[3]))) {
+      } else if ((0 == strncmp(token, "-mm", 3)) && is_space((token[3]))) {
         token += 4;
         tex.option.brightness = parseReal(&token, 0.f);
         tex.option.contrast = parseReal(&token, 1.f);
-      } else if ((0 == strncmp(token, "-o", 2)) && IS_SPACE((token[2]))) {
+      } else if ((0 == strncmp(token, "-o", 2)) && is_space((token[2]))) {
         token += 3;
         parseReal3(tex.option.origin_offset, &token);
-      } else if ((0 == strncmp(token, "-s", 2)) && IS_SPACE((token[2]))) {
+      } else if ((0 == strncmp(token, "-s", 2)) && is_space((token[2]))) {
         token += 3;
         parseReal3(tex.option.scale, &token, 1.f, 1.f, 1.f);
-      } else if ((0 == strncmp(token, "-t", 2)) && IS_SPACE((token[2]))) {
+      } else if ((0 == strncmp(token, "-t", 2)) && is_space((token[2]))) {
         token += 3;
         parseReal3(tex.option.turbulence, &token);
-      } else if ((0 == strncmp(token, "-imfchan", 8)) && IS_SPACE((token[8]))) {
+      } else if ((0 == strncmp(token, "-imfchan", 8)) && is_space((token[8]))) {
         token += 9;
         token += strspn(token, " \t");
         const char *end = token + strcspn(token, " \t\r");
@@ -466,7 +471,7 @@ namespace obj_loader {
           tex.option.imfchan = (*token);
         }
         token = end;
-      } else if ((0 == strncmp(token, "-type", 5)) && IS_SPACE((token[5]))) {
+      } else if ((0 == strncmp(token, "-type", 5)) && is_space((token[5]))) {
         token += 5;
         tex.option.face_type = parseTextureFace(&token, TextureFace::TEX_2D);
       } else {
@@ -520,7 +525,7 @@ namespace obj_loader {
       if (token[0] == '#') continue;  // comment line
 
       // new mtl
-      if ((0 == strncmp(token, "newmtl", 6)) && IS_SPACE((token[6]))) {
+      if ((0 == strncmp(token, "newmtl", 6)) && is_space((token[6]))) {
         // save previous material
         if (!current_mat.name.empty()) {
           material_map.insert(std::make_pair(current_mat.name, static_cast<int>(materials.size())));
@@ -538,7 +543,7 @@ namespace obj_loader {
       }
 
       // ambient
-      if (token[0] == 'K' && token[1] == 'a' && IS_SPACE((token[2]))) {
+      if (token[0] == 'K' && token[1] == 'a' && is_space((token[2]))) {
         token += 2;
         vec3 ambient;
         parseReal3(ambient, &token);
@@ -547,7 +552,7 @@ namespace obj_loader {
       }
 
       // diffuse
-      if (token[0] == 'K' && token[1] == 'd' && IS_SPACE((token[2]))) {
+      if (token[0] == 'K' && token[1] == 'd' && is_space((token[2]))) {
         token += 2;
         vec3 diffuse;
         parseReal3(diffuse, &token);
@@ -556,7 +561,7 @@ namespace obj_loader {
       }
 
       // specular
-      if (token[0] == 'K' && token[1] == 's' && IS_SPACE((token[2]))) {
+      if (token[0] == 'K' && token[1] == 's' && is_space((token[2]))) {
         token += 2;
         vec3 specular;
         parseReal3(specular, &token);
@@ -565,8 +570,8 @@ namespace obj_loader {
       }
 
       // transmittance
-      if ((token[0] == 'K' && token[1] == 't' && IS_SPACE((token[2]))) ||
-          (token[0] == 'T' && token[1] == 'f' && IS_SPACE((token[2])))) {
+      if ((token[0] == 'K' && token[1] == 't' && is_space((token[2]))) ||
+          (token[0] == 'T' && token[1] == 'f' && is_space((token[2])))) {
         token += 2;
         vec3 transmittance;
         parseReal3(transmittance, &token);
@@ -575,14 +580,14 @@ namespace obj_loader {
       }
 
       // ior(index of refraction)
-      if (token[0] == 'N' && token[1] == 'i' && IS_SPACE((token[2]))) {
+      if (token[0] == 'N' && token[1] == 'i' && is_space((token[2]))) {
         token += 2;
         current_mat.ior = parseReal(&token, 0.f);
         continue;
       }
 
       // emission
-      if (token[0] == 'K' && token[1] == 'e' && IS_SPACE(token[2])) {
+      if (token[0] == 'K' && token[1] == 'e' && is_space(token[2])) {
         token += 2;
         vec3 emission;
         parseReal3(emission, &token);
@@ -591,21 +596,21 @@ namespace obj_loader {
       }
 
       // shininess
-      if (token[0] == 'N' && token[1] == 's' && IS_SPACE(token[2])) {
+      if (token[0] == 'N' && token[1] == 's' && is_space(token[2])) {
         token += 2;
         current_mat.shininess = parseReal(&token, 0.f);
         continue;
       }
 
       // illum model
-      if (0 == strncmp(token, "illum", 5) && IS_SPACE(token[5])) {
+      if (0 == strncmp(token, "illum", 5) && is_space(token[5])) {
         token += 6;
         current_mat.illum = parseInt(&token);
         continue;
       }
 
       // dissolve (the non-transparency of the material), The default is 1.0 (not transparent at all)
-      if ((token[0] == 'd' && IS_SPACE(token[1]))) {
+      if ((token[0] == 'd' && is_space(token[1]))) {
         token += 1;
         current_mat.dissolve = parseReal(&token, 1.f);
         has_d = true;
@@ -613,7 +618,7 @@ namespace obj_loader {
       }
 
       // dissolve (the transparency of the material): 1.0 - Tr, The default is 0.0 (not transparent at all)
-      if (token[0] == 'T' && token[1] == 'r' && IS_SPACE(token[2])) {
+      if (token[0] == 'T' && token[1] == 'r' && is_space(token[2])) {
         token += 2;
         if (!has_d) {
           current_mat.dissolve = 1.f - parseReal(&token, 0.f);
@@ -622,7 +627,7 @@ namespace obj_loader {
       }
 
       // ambient texture
-      if ((0 == strncmp(token, "map_Ka", 6)) && IS_SPACE(token[6])) {
+      if ((0 == strncmp(token, "map_Ka", 6)) && is_space(token[6])) {
         token += 7;
         Texture ambient;
         if (parseTexture(ambient, token)) {
@@ -632,7 +637,7 @@ namespace obj_loader {
       }
 
       // diffuse texture
-      if ((0 == strncmp(token, "map_Kd", 6)) && IS_SPACE(token[6])) {
+      if ((0 == strncmp(token, "map_Kd", 6)) && is_space(token[6])) {
         token += 7;
         Texture diffuse;
         if (parseTexture(diffuse, token)) {
@@ -642,7 +647,7 @@ namespace obj_loader {
       }
 
       // specular texture
-      if ((0 == strncmp(token, "map_Ks", 6)) && IS_SPACE(token[6])) {
+      if ((0 == strncmp(token, "map_Ks", 6)) && is_space(token[6])) {
         token += 7;
         Texture specular;
         if (parseTexture(specular, token)) {
@@ -652,7 +657,7 @@ namespace obj_loader {
       }
 
       // specular highlight texture
-      if ((0 == strncmp(token, "map_Ns", 6)) && IS_SPACE(token[6])) {
+      if ((0 == strncmp(token, "map_Ns", 6)) && is_space(token[6])) {
         token += 7;
         Texture specular_highlight;
         if (parseTexture(specular_highlight, token)) {
@@ -662,8 +667,8 @@ namespace obj_loader {
       }
 
       // bump texture
-      if (((0 == strncmp(token, "map_bump", 8)) && IS_SPACE(token[8])) ||
-          ((0 == strncmp(token, "map_Bump", 8)) && IS_SPACE(token[8]))) {
+      if (((0 == strncmp(token, "map_bump", 8)) && is_space(token[8])) ||
+          ((0 == strncmp(token, "map_Bump", 8)) && is_space(token[8]))) {
         token += 9;
         Texture bump;
         if (parseTexture(bump, token)) {
@@ -674,7 +679,7 @@ namespace obj_loader {
       }
 
       // another name of bump map texture
-      if ((0 == strncmp(token, "bump", 4)) && IS_SPACE(token[4])) {
+      if ((0 == strncmp(token, "bump", 4)) && is_space(token[4])) {
         token += 5;
         Texture bump;
         if (parseTexture(bump, token)) {
@@ -685,7 +690,7 @@ namespace obj_loader {
       }
 
       // alpha texture
-      if ((0 == strncmp(token, "map_d", 5)) && IS_SPACE(token[5])) {
+      if ((0 == strncmp(token, "map_d", 5)) && is_space(token[5])) {
         token += 6;
         Texture alpha;
         if (parseTexture(alpha, token)) {
@@ -695,7 +700,7 @@ namespace obj_loader {
       }
 
       // displacement texture
-      if ((0 == strncmp(token, "disp", 4)) && IS_SPACE(token[4])) {
+      if ((0 == strncmp(token, "disp", 4)) && is_space(token[4])) {
         token += 5;
         Texture displacement;
         if (parseTexture(displacement, token)) {
@@ -705,7 +710,7 @@ namespace obj_loader {
       }
 
       // reflection map
-      if ((0 == strncmp(token, "refl", 4)) && IS_SPACE(token[4])) {
+      if ((0 == strncmp(token, "refl", 4)) && is_space(token[4])) {
         token += 5;
         Texture reflection;
         if (parseTexture(reflection, token)) {
@@ -747,7 +752,7 @@ namespace obj_loader {
     std::vector<vec2> texcoords;
     std::vector<vec3> normals;
     std::unordered_map<std::string, int> material_map;
-    Primitive current_prim;
+    PrimitiveGroup current_prim;
     std::string current_object_name;
     std::string current_material_name;
     Mesh current_mesh;
@@ -785,7 +790,7 @@ namespace obj_loader {
       if (token[0] == '#') continue;  // comment line
 
       // vertex
-      if (token[0] == 'v' && IS_SPACE((token[1]))) {
+      if (token[0] == 'v' && is_space((token[1]))) {
         token += 2;
         vec3 v;
         parseReal3(v, &token);
@@ -794,7 +799,7 @@ namespace obj_loader {
       }
 
       // normal
-      if (token[0] == 'v' && token[1] == 'n' && IS_SPACE((token[2]))) {
+      if (token[0] == 'v' && token[1] == 'n' && is_space((token[2]))) {
         token += 3;
         vec3 vn;
         parseReal3(vn, &token);
@@ -803,7 +808,7 @@ namespace obj_loader {
       }
 
       // texcoord
-      if (token[0] == 'v' && token[1] == 't' && IS_SPACE((token[2]))) {
+      if (token[0] == 'v' && token[1] == 't' && is_space((token[2]))) {
         token += 3;
         vec2 vt;
         parseReal2(vt, &token);
@@ -815,14 +820,14 @@ namespace obj_loader {
       }
 
       // face
-      if (token[0] == 'f' && IS_SPACE((token[1]))) {
+      if (token[0] == 'f' && is_space((token[1]))) {
         token += 2;
         token += strspn(token, " \t"); // Skip leading space.
 
         Face f;
         f.vertex_indices.reserve(3);
 
-        while (!IS_NEW_LINE(token[0])) {
+        while (!is_new_line(token[0])) {
           VertexIndex vi;
           if (!parseIndices(&token, vertices.size(), normals.size(), texcoords.size(), &vi)) {
             return false;
@@ -838,7 +843,7 @@ namespace obj_loader {
       }
 
       // use mtl
-      if ((0 == strncmp(token, "usemtl", 6)) && IS_SPACE((token[6]))) {
+      if ((0 == strncmp(token, "usemtl", 6)) && is_space((token[6]))) {
         token += 7;
         std::string new_material_name = parseString(&token);
         int new_material_id = -1;
@@ -860,7 +865,7 @@ namespace obj_loader {
             current_object_name = new_material_name;
           }
           // reset
-          current_prim = Primitive();
+          current_prim = PrimitiveGroup();
           current_mesh = Mesh();
           // cache new material id
           current_material_id = new_material_id;
@@ -870,7 +875,7 @@ namespace obj_loader {
       }
 
       // load mtl
-      if ((0 == strncmp(token, "mtllib", 6)) && IS_SPACE((token[6]))) {
+      if ((0 == strncmp(token, "mtllib", 6)) && is_space((token[6]))) {
         token += 7;
         std::vector<std::string> mtl_file_names;
         // parse multiple mtl filenames split by whitespace
@@ -885,7 +890,7 @@ namespace obj_loader {
       }
 
       // group name
-      if (token[0] == 'g' && IS_SPACE((token[1]))) {
+      if (token[0] == 'g' && is_space((token[1]))) {
         parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
         if (!current_mesh.vertices.empty()) {
           scene.meshes.emplace_back(current_mesh);
@@ -893,14 +898,14 @@ namespace obj_loader {
         }
 
         // reset
-        current_prim = Primitive();
+        current_prim = PrimitiveGroup();
         current_mesh = Mesh();
 
         token += 2;
 
         // assemble multi group name
         std::vector<std::string> names;
-        while (!IS_NEW_LINE(token[0])) {
+        while (!is_new_line(token[0])) {
           names.emplace_back(parseString(&token));
           token += strspn(token, " \t\r"); // skip space
         }
@@ -919,7 +924,7 @@ namespace obj_loader {
       }
 
       // object name
-      if (token[0] == 'o' && IS_SPACE((token[1]))) {
+      if (token[0] == 'o' && is_space((token[1]))) {
         parsePrimitive(current_mesh, current_prim, parse_option, current_material_id, vertices, texcoords, normals, current_object_name, filename); // return value not used
         if (!current_mesh.vertices.empty()) {
           scene.meshes.emplace_back(current_mesh);
@@ -927,7 +932,7 @@ namespace obj_loader {
         }
 
         // reset
-        current_prim = Primitive();
+        current_prim = PrimitiveGroup();
         current_mesh = Mesh();
 
         token += 2;

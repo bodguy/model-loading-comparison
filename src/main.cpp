@@ -73,9 +73,8 @@ void log_mesh_profile(const std::string& name, const obj_loader::Scene& scene, b
 
 int main() {
   std::vector<std::string> file_list = {
-    "nanosuit/nanosuit.obj"
-//    , "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
-//    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj", "panda/PandaMale.obj"
+    "nanosuit/nanosuit.obj", "sandal.obj", "teapot.obj", "cube.obj", "cow.obj", "sponza.obj", "Five_Wheeler.obj", "Skull.obj", "sphere.obj", "dragon.obj", "monkey.obj",
+    "budda/budda.obj", "Merged_Extract8.obj", "officebot/officebot.obj", "revolver/Steampunk_Revolver1.obj", "panda/PandaMale.obj"
   };
   Profiler profiler;
   bool verbos = false;
