@@ -34,6 +34,10 @@ struct vec3 {
   bool operator == (const vec3& rhs) {
     return (float_comapre(this->x, rhs.x) && float_comapre(this->y, rhs.y) && float_comapre(this->z, rhs.z));
   }
+
+  vec3 operator -(const vec3& other) {
+    return {x - other.x, y - other.y, z - other.z};
+  }
 };
 
 struct vec2 {
@@ -42,6 +46,10 @@ struct vec2 {
   float x, y;
   bool operator == (const vec2& rhs) {
     return (float_comapre(this->x, rhs.x) && float_comapre(this->y, rhs.y));
+  }
+
+  vec2 operator -(const vec2& other) {
+    return {x - other.x, y - other.y};
   }
 };
 

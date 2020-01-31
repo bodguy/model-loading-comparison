@@ -22,13 +22,24 @@ namespace obj_loader {
     return x == '\r' || x == '\n' || x == '\0';
   }
 
+  vec3 normalize(const vec3& v) {
+    float len = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+    float inv = 1 / len;
+    vec3 result{};
+
+    result.x = v.x * inv;
+    result.y = v.y * inv;
+    result.z = v.z * inv;
+
+    return result;
+  }
+
   struct Vertex {
-    Vertex() :position(), texcoord(), normal() {}
+    Vertex() :position(), texcoord(), normal(), tangent() {}
     vec3 position;
     vec2 texcoord;
     vec3 normal;
-//    vec3 Tangent;
-//    vec3 Bitangent;
+    vec3 tangent;
   };
 
   struct VertexIndex {
@@ -140,7 +151,8 @@ namespace obj_loader {
   enum class ParseOption {
     NONE = 0,
     TRIANGULATE = 1 << 0,
-    FLIP_UV = 1 << 1
+    FLIP_UV = 1 << 1,
+    CALC_TANGENT = 1 << 2,
   };
 
   inline bool operator&(const ParseOption a, const ParseOption b) {
@@ -161,6 +173,34 @@ namespace obj_loader {
     std::string base_dir;
   };
 
+  inline void calcTangent(Mesh& mesh, unsigned int offset) {
+    unsigned int offset_start = offset * 3;
+    Vertex v1 = mesh.vertices.at(offset_start);
+    Vertex v2 = mesh.vertices.at(offset_start + 1);
+    Vertex v3 = mesh.vertices.at(offset_start + 2);
+
+    vec3 e1 = v2.position - v1.position;
+    vec3 e2 = v3.position - v1.position;
+    vec2 delta1 = v2.texcoord - v1.texcoord;
+    vec2 delta2 = v3.texcoord - v1.texcoord;
+
+    float f = 1.f / (delta1.x * delta2.y - delta2.x * delta1.y);
+
+    vec3 tangent;
+    tangent.x = f * (delta2.y * e1.x - delta1.y * e2.x);
+    tangent.y = f * (delta2.y * e1.y - delta1.y * e2.y);
+    tangent.z = f * (delta2.y * e1.z - delta1.y * e2.z);
+    tangent = normalize(tangent);
+
+    v1.tangent = tangent;
+    v2.tangent = tangent;
+    v3.tangent = tangent;
+
+    mesh.vertices[offset_start] = v1;
+    mesh.vertices[offset_start + 1] = v2;
+    mesh.vertices[offset_start + 2] = v3;
+  }
+
   inline void triangulate(Mesh& mesh, const std::vector<vec3>& verts, size_t npolys) {
     // @TODO
   }
@@ -174,6 +214,7 @@ namespace obj_loader {
     mesh.name = name.empty() ? default_name : name;
 
     // make polygon
+    unsigned int count = 0;
     for (const Face& face : primitive.faces) {
       size_t npolys = face.vertex_indices.size();
 
@@ -194,11 +235,17 @@ namespace obj_loader {
           vtx.normal = (idx.vn_idx == -1 ? vec3() : normals[idx.vn_idx]);
           mesh.vertices.emplace_back(vtx);
         }
+
+        if ((option & ParseOption::CALC_TANGENT) && npolys == 3) {
+          calcTangent(mesh, count);
+        }
+
         auto preCompute = (unsigned int)((mesh.vertices.size()) - npolys);
         for (size_t ff = 0; ff < npolys; ff++) {
           mesh.indices.emplace_back(preCompute + ff);
         }
         mesh.material_id = material_id;
+        count++;
       }
     }
 

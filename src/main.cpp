@@ -112,7 +112,7 @@ int main() {
   for (auto& str : file_list) {
     obj_loader::Scene scene;
     profiler.Start();
-    bool res = obj_loader::loadObj("../res/" + str, scene, obj_loader::ParseOption::FLIP_UV);
+    bool res = obj_loader::loadObj("../res/" + str, scene, obj_loader::ParseOption::FLIP_UV | obj_loader::ParseOption::CALC_TANGENT);
     log_mesh_profile(str, scene, res, profiler.Stop(), verbos);
   }
   std::cout << "average elapsed time (OBJ): " << profiler.Average() << " ms" << '\n';
