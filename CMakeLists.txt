@@ -20,10 +20,3 @@ if(assimp_FOUND)
     target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${EXTRA_INCLUDE_DIR})
     target_link_libraries(${CMAKE_PROJECT_NAME} ${assimp_LIBRARIES})
 endif()
-
-# print all of cmake variables to terminal
-#get_cmake_property(_variableNames VARIABLES)
-#list (SORT _variableNames)
-#foreach (_variableName ${_variableNames})
-#    message(STATUS "${_variableName}=${${_variableName}}")
-#endforeach()
